@@ -1163,7 +1163,7 @@ namespace Towel.Mathematics
 		{
 			// Note: this Method needs optimization...
 
-			return new Matrix<T>(3, 3, (int x, int y) =>
+			return new MatrixDense<T>(3, 3, (int x, int y) =>
 			{
 				switch (x)
 				{

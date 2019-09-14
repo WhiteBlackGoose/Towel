@@ -9,41 +9,1336 @@ namespace Towel.Mathematics
 	/// <typeparam name="T">The numeric type of this Matrix.</typeparam>
 	[DebuggerDisplay("{" + nameof(DebuggerString) + "}")]
 	[Serializable]
-	public class Matrix<T>
+	public abstract class Matrix<T>
 	{
-		internal readonly T[] _matrix;
-		internal int _rows;
-		internal int _columns;
+		#region Members
 
 		#region Properties
 
-		internal int Length { get { return _matrix.Length; } }
 		/// <summary>The number of rows in the matrix.</summary>
-		public int Rows { get { return _rows; } }
+		public abstract int Rows { get; }
 		/// <summary>The number of columns in the matrix.</summary>
-		public int Columns { get { return _columns; } }
+		public abstract int Columns { get; }
 		/// <summary>Determines if the matrix is square.</summary>
-		public bool IsSquare { get { return _rows == _columns; } }
+		public abstract bool IsSquare { get; }
 		/// <summary>Determines if the matrix is a vector.</summary>
-		public bool IsVector { get { return _columns == 1; } }
+		public abstract bool IsVector { get; }
 		/// <summary>Determines if the matrix is a 2 component vector.</summary>
-		public bool Is2x1 { get { return _rows == 2 && _columns == 1; } }
+		public abstract bool Is2x1 { get; }
 		/// <summary>Determines if the matrix is a 3 component vector.</summary>
-		public bool Is3x1 { get { return _rows == 3 && _columns == 1; } }
+		public abstract bool Is3x1 { get; }
 		/// <summary>Determines if the matrix is a 4 component vector.</summary>
-		public bool Is4x1 { get { return _rows == 4 && _columns == 1; } }
+		public abstract bool Is4x1 { get; }
 		/// <summary>Determines if the matrix is a 2 square matrix.</summary>
-		public bool Is2x2 { get { return _rows == 2 && _columns == 2; } }
+		public abstract bool Is2x2 { get; }
 		/// <summary>Determines if the matrix is a 3 square matrix.</summary>
-		public bool Is3x3 { get { return _rows == 3 && _columns == 3; } }
+		public abstract bool Is3x3 { get; }
 		/// <summary>Determines if the matrix is a 4 square matrix.</summary>
-		public bool Is4x4 { get { return _rows == 4 && _columns == 4; } }
+		public abstract bool Is4x4 { get; }
 
 		/// <summary>Standard row-major matrix indexing.</summary>
 		/// <param name="row">The row index.</param>
 		/// <param name="column">The column index.</param>
 		/// <returns>The value at the given indeces.</returns>
-		public T this[int row, int column]
+		public abstract T this[int row, int column] { get; set; }
+
+		/// <summary>Indexing of the flattened array representing the matrix.</summary>
+		/// <param name="flatIndex">The flattened index of the matrix.</param>
+		/// <returns>The value at the given flattened index.</returns>
+		public abstract T this[int flatIndex] { get; set; }
+
+		#endregion
+
+		#region Debugger Properties
+
+		internal virtual string DebuggerString { get; }
+
+		#endregion
+
+		#region Factories
+
+		/// <summary>Constructs a new zero-matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <returns>The newly constructed zero-matrix.</returns>
+		public static Matrix<T> FactoryZero(int rows, int columns)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (DenseCheck(rows, columns))
+			{
+				return MatrixDense<T>.FactoryZero(rows, columns);
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+		}
+
+		/// <summary>Constructs a new identity-matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <returns>The newly constructed identity-matrix.</returns>
+		public static Matrix<T> FactoryIdentity(int rows, int columns)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (DenseCheck(rows, columns))
+			{
+				return MatrixDense<T>.FactoryIdentity(rows, columns);
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+		}
+
+		/// <summary>Constructs a new matrix where every entry is the same uniform value.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <param name="value">The value to assign every spot in the matrix.</param>
+		/// <returns>The newly constructed matrix filled with the uniform value.</returns>
+		public static Matrix<T> FactoryUniform(int rows, int columns, T value)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (DenseCheck(rows, columns))
+			{
+				return MatrixDense<T>.FactoryUniform(rows, columns, value);
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+		}
+
+		#endregion
+
+		#region Mathematics
+
+		#region IsSymetric
+
+		/// <summary>Determines if the matrix is symetric.</summary>
+		/// <param name="a">The matrix to determine if symetric.</param>
+		/// <returns>True if the matrix is symetric; false if not.</returns>
+		public static bool GetIsSymetric(Matrix<T> a)
+		{
+			return a.IsSymetric;
+		}
+
+		/// <summary>Determines if the matrix is symetric.</summary>
+		/// <returns>True if the matrix is symetric; false if not.</returns>
+		public virtual bool IsSymetric
+		{
+			get
+			{
+				if (!IsSquare)
+				{
+					return false;
+				}
+				for (int row = 0; row < Rows; row++)
+				{
+					for (int column = 0; column < row; column++)
+					{
+						if (Compute.NotEqual(this[row, column], this[column, row]))
+						{
+							return false;
+						}
+					}
+				}
+				return GetIsSymetric(this);
+			}
+		}
+
+		#endregion
+
+		#region Negate
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		private static void Negate(Matrix<T> a, ref Matrix<T> b) =>
+			a.Negate(ref b);
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public static Matrix<T> Negate(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			Negate(a, ref b);
+			return b;
+		}
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public static Matrix<T> operator -(Matrix<T> a)
+		{
+			return Negate(a);
+		}
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		public abstract void Negate(ref Matrix<T> b);
+
+		/// <summary>Negates all the values in this matrix.</summary>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public Matrix<T> Negate() => -this;
+
+		#endregion
+
+		#region Add
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <param name="c">The resulting matrix after the addition.</param>
+		private static void Add(Matrix<T> a, Matrix<T> b, ref Matrix<T> c) => a.Add(b, ref c);
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <returns>The resulting matrix after the addition.</returns>
+		public static Matrix<T> Add(Matrix<T> a, Matrix<T> b)
+		{
+			Matrix<T> c = null;
+			Add(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard matrix addition.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <returns>The resulting matrix after teh addition.</returns>
+		public static Matrix<T> operator +(Matrix<T> a, Matrix<T> b)
+		{
+			return Add(a, b);
+		}
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <param name="c">The resulting matrix after the addition.</param>
+		public virtual void Add(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + " && " +
+					nameof(Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
+			}
+			if (DenseCheck(Rows, Columns))
+			{
+				if (c != null || !(c is MatrixDense<T> cDense))
+				{
+					c = new MatrixDense<T>(Rows, Columns);
+				}
+				else
+				{
+					cDense._rows = Rows;
+					cDense._columns = Columns;
+				}
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					c[row, column] = Compute.Add(this[row, column], b[row, column]);
+				}
+			}
+		}
+
+		/// <summary>Does a standard matrix addition.</summary>
+		/// <param name="b">The matrix to add to this matrix.</param>
+		/// <returns>The resulting matrix after the addition.</returns>
+		public Matrix<T> Add(Matrix<T> b)
+		{
+			return this + b;
+		}
+
+		#endregion
+
+		#region Subtract
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		private static void Subtract(Matrix<T> a, Matrix<T> b, ref Matrix<T> c) => a.Subtract(b, ref c);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public static Matrix<T> Subtract(Matrix<T> a, Matrix<T> b)
+		{
+			Matrix<T> c = null;
+			Subtract(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public static Matrix<T> operator -(Matrix<T> a, Matrix<T> b)
+		{
+			return Subtract(a, b);
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public virtual void Subtract(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + " && " +
+					nameof(Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
+			}
+			if (DenseCheck(Rows, Columns))
+			{
+				if (c != null || !(c is MatrixDense<T> cDense))
+				{
+					c = new MatrixDense<T>(Rows, Columns);
+				}
+				else
+				{
+					cDense._rows = Rows;
+					cDense._columns = Columns;
+				}
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					c[row, column] = Compute.Subtract(this[row, column], b[row, column]);
+				}
+			}
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public Matrix<T> Subtract(Matrix<T> b)
+		{
+			return this - b;
+		}
+
+		#endregion
+
+		#region Multiply (Matrix * Matrix)
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public static void Multiply(Matrix<T> a, Matrix<T> b, ref Matrix<T> c) => a.Multiply(b, ref c);
+		//{
+		//	if (a is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(a));
+		//	}
+		//	if (b is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(b));
+		//	}
+		//	if (a._columns != b._rows)
+		//	{
+		//		throw new MathematicsException("Arguments invalid !(" +
+		//			nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
+		//	}
+		//	if (object.ReferenceEquals(a, b) && object.ReferenceEquals(a, c))
+		//	{
+		//		Matrix<T> clone = a.Clone();
+		//		a = clone;
+		//		b = clone;
+		//	}
+		//	else if (object.ReferenceEquals(a, c))
+		//	{
+		//		a = a.Clone();
+		//	}
+		//	else if (object.ReferenceEquals(b, c))
+		//	{
+		//		b = b.Clone();
+		//	}
+		//	int c_Rows = a._rows;
+		//	int a_Columns = a._columns;
+		//	int c_Columns = b._columns;
+		//	T[] A = a._matrix;
+		//	T[] B = b._matrix;
+		//	T[] C;
+		//	if (c != null && c._matrix.Length == c_Rows * c_Columns)
+		//	{
+		//		C = c._matrix;
+		//		c._rows = c_Rows;
+		//		c._columns = c_Columns;
+		//	}
+		//	else
+		//	{
+		//		c = new Matrix<T>(c_Rows, c_Columns);
+		//		C = c._matrix;
+		//	}
+		//	for (int i = 0; i < c_Rows; i++)
+		//	{
+		//		int i_times_a_Columns = i * a_Columns;
+		//		int i_times_c_Columns = i * c_Columns;
+		//		for (int j = 0; j < c_Columns; j++)
+		//		{
+		//			T sum = Constant<T>.Zero;
+		//			for (int k = 0; k < a_Columns; k++)
+		//			{
+		//				sum = Compute.MultiplyAddImplementation<T>.Function(A[i_times_a_Columns + k], B[k * c_Columns + j], sum);
+		//			}
+		//			C[i_times_c_Columns + j] = sum;
+		//		}
+		//	}
+		//}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public static Matrix<T> Multiply(Matrix<T> a, Matrix<T> b)
+		{
+			Matrix<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public static Matrix<T> operator *(Matrix<T> a, Matrix<T> b)
+		{
+			return Multiply(a, b);
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public virtual void Multiply(Matrix<T> b, ref Matrix<T> c)
+		{
+			throw new NotImplementedException();
+
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public Matrix<T> Multiply(Matrix<T> b)
+		{
+			return this * b;
+		}
+
+		#endregion
+
+		#region Multiply (Matrix * Vector)
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <param name="c">The resulting vector of the multiplication.</param>
+		private static void Multiply(Matrix<T> a, Vector<T> b, ref Vector<T> c) => a.Multiply(b, ref c);
+		//{
+		//	if (a is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(a));
+		//	}
+		//	if (b is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(b));
+		//	}
+		//	int rows = a._rows;
+		//	int columns = a._columns;
+		//	if (columns != b.Dimensions)
+		//	{
+		//		throw new MathematicsException("Arguments invalid !(" +
+		//			nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Dimensions) + ")");
+		//	}
+		//	T[] A = a._matrix;
+		//	T[] B = b._vector;
+		//	T[] C;
+		//	if (c != null && c.Dimensions == columns)
+		//	{
+		//		C = c._vector;
+		//	}
+		//	else
+		//	{
+		//		c = new Vector<T>(columns);
+		//		C = c._vector;
+		//	}
+		//	for (int i = 0; i < rows; i++)
+		//	{
+		//		int i_times_columns = i * columns;
+		//		T sum = Constant<T>.Zero;
+		//		for (int j = 0; j < columns; j++)
+		//		{
+		//			sum = Compute.Add(sum, Compute.Multiply(A[i_times_columns + j], B[j]));
+		//		}
+		//		C[i] = sum;
+		//	}
+		//}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public static Vector<T> Multiply(Matrix<T> a, Vector<T> b)
+		{
+			Vector<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public static Vector<T> operator *(Matrix<T> a, Vector<T> b)
+		{
+			return Multiply(a, b);
+		}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <param name="c">The resulting vector of the multiplication.</param>
+		public virtual void Multiply(Vector<T> b, ref Vector<T> c)
+		{
+			throw new NotImplementedException("need sparce matrix");
+		}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public Vector<T> Multiply(Vector<T> b)
+		{
+			return this * b;
+		}
+
+		#endregion
+
+		#region Multiply (Matrix * Scalar)
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		private static void Multiply(Matrix<T> a, T b, ref Matrix<T> c) => a.Multiply(b, ref c);
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static Matrix<T> Multiply(Matrix<T> a, T b)
+		{
+			Matrix<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static Matrix<T> Multiply(T b, Matrix<T> a) => Multiply(a, b);
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static Matrix<T> operator *(Matrix<T> a, T b) => Multiply(a, b);
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static Matrix<T> operator *(T b, Matrix<T> a) => Multiply(b, a);
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		public abstract void Multiply(T b, ref Matrix<T> c);
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public Matrix<T> Multiply(T b) => this * b;
+
+		#endregion
+
+		#region Divide (Matrix / Scalar)
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		private static void Divide(Matrix<T> a, T b, ref Matrix<T> c) => a.Divide(b, ref c);
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public static Matrix<T> Divide(Matrix<T> a, T b)
+		{
+			Matrix<T> c = null;
+			Divide(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public static Matrix<T> operator /(Matrix<T> a, T b)
+		{
+			return Divide(a, b);
+		}
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		public abstract void Divide(T b, ref Matrix<T> c);
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public Matrix<T> Divide(T b)
+		{
+			return this / b;
+		}
+
+		#endregion
+
+		#region Power (Matrix ^ Scalar)
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		private static void Power(Matrix<T> a, int b, ref Matrix<T> c) => a.Power(b, ref c);
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public static Matrix<T> Power(Matrix<T> a, int b)
+		{
+			Matrix<T> c = null;
+			Power(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public static Matrix<T> operator ^(Matrix<T> a, int b)
+		{
+			return Power(a, b);
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		public abstract void Power(int b, ref Matrix<T> c);
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public Matrix<T> Power(int b)
+		{
+			return this ^ b;
+		}
+
+		#endregion
+
+		#region Determinent
+
+		/// <summary>Computes the determinent of a square matrix.</summary>
+		/// <param name="a">The matrix to compute the determinent of.</param>
+		/// <returns>The computed determinent.</returns>
+		public static T Determinent(Matrix<T> a) => a.Determinent();
+
+		/// <summary>Computes the determinent of a square matrix.</summary>
+		/// <returns>The computed determinent.</returns>
+		public abstract T Determinent();
+
+		#endregion
+
+		#region Trace
+
+		/// <summary>Computes the trace of a square matrix.</summary>
+		/// <param name="a">The matrix to compute the trace of.</param>
+		/// <returns>The computed trace.</returns>
+		public static T Trace(Matrix<T> a) => a.Trace();
+
+		/// <summary>Computes the trace of a square matrix.</summary>
+		/// <returns>The computed trace.</returns>
+		public virtual T Trace()
+		{
+			if (!IsSquare)
+			{
+				throw new MathematicsException("Argument invalid !(this." + nameof(IsSquare) + ")");
+			}
+			T trace = Compute.Add<T>(step =>
+			{
+				for (int i = 0; i < Rows; i++)
+				{
+					step(this[i * Rows, + i]);
+				}
+			});
+			return trace;
+		}
+
+		#endregion
+
+		#region Minor
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="a">The matrix to get the minor of.</param>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		private static void Minor(Matrix<T> a, int row, int column, ref Matrix<T> b) => a.Minor(row, column, ref b);
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="a">The matrix to get the minor of.</param>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <returns>The minor of the matrix.</returns>
+		public static Matrix<T> Minor(Matrix<T> a, int row, int column)
+		{
+			Matrix<T> b = null;
+			Minor(a, row, column, ref b);
+			return b;
+		}
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		public virtual void Minor(int row, int column, ref Matrix<T> b)
+		{
+			if (Rows < 2 || Columns < 2)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(Rows) + " >= 2 && " + nameof(Columns) + " >= 2)");
+			}
+			if (row < 0 || row >= Rows)
+			{
+				throw new ArgumentOutOfRangeException(nameof(row), row, "!(" + nameof(row) + " > 0)");
+			}
+			if (column < 0 || column >= Columns)
+			{
+				throw new ArgumentOutOfRangeException(nameof(column), column, "!(" + nameof(column) + " > 0)");
+			}
+			Matrix<T> a = this;
+			if (object.ReferenceEquals(this, b))
+			{
+				a = a.Clone();
+			}
+			int b_rows = Rows - 1;
+			int b_columns = Columns - 1;
+			if (DenseCheck(b_rows, b_columns))
+			{
+				int b_length = b_rows * b_columns;
+				if (b is null || !(b is MatrixDense<T> bDense) || bDense._matrix.Length != b_length)
+				{
+					b = new MatrixDense<T>(b_rows, b_columns, b_length);
+				}
+				else
+				{
+					bDense._rows = b_rows;
+					bDense._columns = b_columns;
+				}
+			}
+			else
+			{
+				throw new NotImplementedException("need sparse matrix");
+			}
+			int m = 0, n = 0;
+			for (int i = 0; i < Rows; i++)
+			{
+				if (i == row)
+				{
+					continue;
+				}
+				int i_times_a_columns = i * Columns;
+				int m_times_b_columns = m * b_columns;
+				n = 0;
+				for (int j = 0; j < Columns; j++)
+				{
+					if (j == column)
+					{
+						continue;
+					}
+					T temp = a[i * Columns, j];
+					b[m * b_columns, n] = temp;
+					n++;
+				}
+				m++;
+			}
+		}
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <returns>The minor of the matrix.</returns>
+		public Matrix<T> Minor(int row, int column)
+		{
+			return Minor(this, row, column);
+		}
+
+		#endregion
+
+		#region ConcatenateRowWise
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="a">The left matrix of the concatenation.</param>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		private static void ConcatenateRowWise(Matrix<T> a, Matrix<T> b, ref Matrix<T> c) => a.ConcatenateRowWise(b, ref c);
+		//{
+		//	if (a is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(a));
+		//	}
+		//	if (b is null)
+		//	{
+		//		throw new ArgumentNullException(nameof(a));
+		//	}
+		//	if (a._rows != b._rows)
+		//	{
+		//		throw new MathematicsException("Arguments invalid !(" + nameof(a) + "." + nameof(a.Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
+		//	}
+		//	int a_columns = a._columns;
+		//	int b_columns = b._columns;
+		//	int c_rows = a._rows;
+		//	int c_columns = a._columns + b._columns;
+		//	int c_length = c_rows * c_columns;
+		//	if (c is null ||
+		//		c._matrix.Length != c_length ||
+		//		object.ReferenceEquals(a, c) ||
+		//		object.ReferenceEquals(b, c))
+		//	{
+		//		c = new Matrix<T>(c_rows, c_columns, c_length);
+		//	}
+		//	else
+		//	{
+		//		c._rows = c_rows;
+		//		c._columns = c_columns;
+		//	}
+		//	T[] A = a._matrix;
+		//	T[] B = b._matrix;
+		//	T[] C = c._matrix;
+		//	for (int i = 0; i < c_rows; i++)
+		//	{
+		//		int i_times_a_columns = i * a_columns;
+		//		int i_times_b_columns = i * b_columns;
+		//		int i_times_c_columns = i * c_columns;
+		//		for (int j = 0; j < c_columns; j++)
+		//		{
+		//			if (j < a_columns)
+		//			{
+		//				C[i_times_c_columns + j] = A[i_times_a_columns + j];
+		//			}
+		//			else
+		//			{
+		//				C[i_times_c_columns + j] = B[i_times_b_columns + j - a_columns];
+		//			}
+		//		}
+		//	}
+		//}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="a">The left matrix of the concatenation.</param>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <returns>The resulting matrix of the concatenation.</returns>
+		public static Matrix<T> ConcatenateRowWise(Matrix<T> a, Matrix<T> b)
+		{
+			Matrix<T> c = null;
+			ConcatenateRowWise(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		public virtual void ConcatenateRowWise(Matrix<T> b, ref Matrix<T> c)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <returns>The resulting matrix of the concatenation.</returns>
+		public Matrix<T> ConcatenateRowWise(Matrix<T> b) =>
+			ConcatenateRowWise(this, b);
+
+		#endregion
+
+		#region Echelon
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		/// <bug>Failing for non-floating point rational types due to zero how values are being compared.</bug>
+		private static void Echelon(Matrix<T> a, ref Matrix<T> b) => a.Echelon(ref b);
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+		/// <returns>The echelon of the matrix (aka REF).</returns>
+		public static Matrix<T> Echelon(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			Echelon(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		public abstract void Echelon(ref Matrix<T> b);
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <returns>The echelon of the matrix (aka REF).</returns>
+		public Matrix<T> Echelon() => Echelon(this);
+
+		#endregion
+
+		#region ReducedEchelon
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		private static void ReducedEchelon(Matrix<T> a, ref Matrix<T> b) => a.ReducedEchelon(ref b);
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+		/// <returns>The reduced echelon of the matrix (aka RREF).</returns>
+		public static Matrix<T> ReducedEchelon(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			ReducedEchelon(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		public abstract void ReducedEchelon(ref Matrix<T> b);
+
+		/// <summary>Matrixs the reduced echelon form of this matrix (aka RREF).</summary>
+		/// <returns>The computed reduced echelon form of this matrix (aka RREF).</returns>
+		public Matrix<T> ReducedEchelon() => ReducedEchelon(this);
+
+		#endregion
+
+		#region Inverse
+
+		/// <summary>Calculates the inverse of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the inverse of.</param>
+		/// <param name="b">The inverse of the matrix.</param>
+		private static void Inverse(Matrix<T> a, ref Matrix<T> b) => a.Inverse(ref b);
+
+		/// <summary>Calculates the inverse of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the inverse of.</param>
+		/// <returns>The inverse of the matrix.</returns>
+		public static Matrix<T> Inverse(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			Inverse(a, ref b);
+			return b;
+		}
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public abstract void Inverse(ref Matrix<T> b);
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public Matrix<T> Inverse() => Inverse(this);
+
+		#endregion
+
+		#region Adjoint
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the adjoint of.</param>
+		/// <param name="b">The adjoint of the matrix.</param>
+		private static void Adjoint(Matrix<T> a, ref Matrix<T> b) => a.Adjoint(ref b);
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the adjoint of.</param>
+		/// <returns>The adjoint of the matrix.</returns>
+		public static Matrix<T> Adjoint(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			Adjoint(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="b">The adjoint of the matrix.</param>
+		public abstract void Adjoint(ref Matrix<T> b);
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <returns>The adjoint of the matrix.</returns>
+		public Matrix<T> Adjoint() => Adjoint(this);
+
+		#endregion
+
+		#region Transpose
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="a">The matrix to transpose.</param>
+		/// <param name="b">The transpose of the matrix.</param>
+		private static void Transpose(Matrix<T> a, ref Matrix<T> b) => a.Transpose(ref b);
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="a">The matrix to transpose.</param>
+		/// <returns>The transpose of the matrix.</returns>
+		public static Matrix<T> Transpose(Matrix<T> a)
+		{
+			Matrix<T> b = null;
+			Transpose(a, ref b);
+			return b;
+		}
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="b">The transpose of the matrix.</param>
+		public abstract void Transpose(ref Matrix<T> b);
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <returns>The transpose of the matrix.</returns>
+		public Matrix<T> Transpose() => Transpose(this);
+
+		#endregion
+
+		#region DecomposeLowerUpper
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="matrix">The matrix to decompose.</param>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public static void DecomposeLowerUpper(Matrix<T> matrix, ref Matrix<T> lower, ref Matrix<T> upper) =>
+			matrix.DecomposeLowerUpper(ref lower, ref upper);
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public abstract void DecomposeLowerUpper(ref Matrix<T> lower, ref Matrix<T> upper);
+
+		#endregion
+
+		#region Rotate
+
+		public static void Rotate4x4(Matrix<T> matrix, Angle<T> angle, Vector<T> axis, ref Matrix<T> b) => matrix.Rotate4x4(angle, axis, ref b);
+
+		public static Matrix<T> Rotate4x4(Matrix<T> matrix, Angle<T> angle, Vector<T> axis)
+		{
+			Matrix<T> b = null;
+			Rotate4x4(matrix, angle, axis, ref b);
+			return b;
+		}
+
+		public abstract void Rotate4x4(Angle<T> angle, Vector<T> axis, ref Matrix<T> b);
+
+		public Matrix<T> Rotate4x4(Angle<T> angle, Vector<T> axis) => Rotate4x4(this, angle, axis);
+
+		#endregion
+
+		#region Equal
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		private static bool Equal(Matrix<T> a, Matrix<T> b) => a.Equal(b);
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public static bool operator ==(Matrix<T> a, Matrix<T> b) => Equal(a, b);
+
+		/// <summary>Does a value non-equality check.</summary>
+		/// <param name="a">The first matrix to check for non-equality.</param>
+		/// <param name="b">The second matrix to check for non-equality.</param>
+		/// <returns>True if values are not equal, false if not.</returns>
+		public static bool operator !=(Matrix<T> a, Matrix<T> b) => !Equal(a, b);
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public virtual bool Equal(Matrix<T> b)
+		{
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				return false;
+			}
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					if (Compute.NotEqual(this[row, column], b[row, column]))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		#endregion
+
+		#region Equal (+leniency)
+
+		/// <summary>Does a value equality check with leniency.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		private static bool Equal(Matrix<T> a, Matrix<T> b, T leniency) => a.Equal(b, leniency);
+
+		/// <summary>Does a value equality check with leniency.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public virtual bool Equal(Matrix<T> b, T leniency)
+		{
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				return false;
+			}
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					if (!Compute.EqualLeniency(this[row, column], b[row, column], leniency))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		#endregion
+
+		#endregion
+
+		#region Other Methods
+
+		internal static bool DenseCheck(int rows, int columns) =>
+			rows < 10 && columns < 10;
+
+		#region Get/Set
+
+		internal T Get(int row, int column)
+		{
+			return this[row * Columns + column];
+		}
+
+		internal void Set(int row, int column, T value)
+		{
+			this[row * Columns + column] = value;
+		}
+
+		#endregion
+
+		#region Format
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="matrix">The matrix to fill the values of.</param>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public static void Format(Matrix<T> matrix, Func<int, int, T> func) => matrix.Format(func);
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="matrix">The matrix to fill the values of.</param>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public static void Format(Matrix<T> matrix, Func<int, T> func) => matrix.Format(func);
+
+		public abstract void Format(Func<int, int, T> func);
+
+		public abstract void Format(Func<int, T> func);
+
+		#endregion
+
+		#region Clone
+
+		/// <summary>Creates a copy of a matrix.</summary>
+		/// <param name="a">The matrix to copy.</param>
+		/// <returns>The copy of this matrix.</returns>
+		public static Matrix<T> Clone(Matrix<T> a)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			return a.Clone();
+		}
+
+		/// <summary>Copies this matrix.</summary>
+		/// <returns>The copy of this matrix.</returns>
+		public abstract Matrix<T> Clone();
+
+		#endregion
+
+		#endregion
+
+		#region Casting Operators
+
+		/// <summary>Converts a T[,] into a matrix.</summary>
+		/// <param name="array">The T[,] to convert to a matrix.</param>
+		/// <returns>The resulting matrix after conversion.</returns>
+		public static implicit operator Matrix<T>(T[,] array) =>
+			new MatrixDense<T>(array.GetLength(0), array.GetLength(1), (i, j) => array[i, j]);
+
+		/// <summary>Converts a matrix into a T[,].</summary>
+		/// <param name="matrix">The matrix toconvert to a T[,].</param>
+		/// <returns>The resulting T[,] after conversion.</returns>
+		public static explicit operator T[,](Matrix<T> matrix)
+		{
+			int rows = matrix.Rows;
+			int columns = matrix.Columns;
+			T[,] array = new T[rows, columns];
+			for (int i = 0; i < rows; i++)
+			{
+				for (int j = 0; j < columns; j++)
+				{
+					array[i, j] = matrix[i, j];
+				}
+			}
+			return array;
+		}
+
+		#endregion
+
+		#region Steppers
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public abstract void Stepper(Step<T> step);
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public abstract void Stepper(StepRef<T> step);
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public abstract StepStatus Stepper(StepBreak<T> step);
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public abstract StepStatus Stepper(StepRefBreak<T> step);
+
+		#endregion
+
+		#region Overrides
+
+		/// <summary>Prints out a string representation of this matrix.</summary>
+		/// <returns>A string representing this matrix.</returns>
+		public override string ToString() => base.ToString();
+
+		/// <summary>Matrixs a hash code from the values of this matrix.</summary>
+		/// <returns>A hash code for the matrix.</returns>
+		public override int GetHashCode() => base.GetHashCode();
+
+		/// <summary>Does an equality check by value.</summary>
+		/// <param name="b">The object to compare to.</param>
+		/// <returns>True if the references are equal, false if not.</returns>
+		public override bool Equals(object b) =>
+			b is Matrix<T> B
+			? Equal(this, B)
+			: false;
+
+		#endregion
+
+		#endregion
+	}
+
+	/// <summary>A matrix of arbitrary dimensions implemented as a flattened array.</summary>
+	/// <typeparam name="T">The numeric type of this Matrix.</typeparam>
+	[DebuggerDisplay("{" + nameof(DebuggerString) + "}")]
+	[Serializable]
+	public class MatrixDense<T> : Matrix<T>
+	{
+		internal readonly T[] _matrix;
+		internal int _rows;
+		internal int _columns;
+
+		#region Members
+
+		#region Properties
+
+		internal int Length => _matrix.Length;
+		/// <summary>The number of rows in the matrix.</summary>
+		public override int Rows => _rows;
+		/// <summary>The number of columns in the matrix.</summary>
+		public override int Columns => _columns;
+		/// <summary>Determines if the matrix is square.</summary>
+		public override bool IsSquare => _rows == _columns;
+		/// <summary>Determines if the matrix is a vector.</summary>
+		public override bool IsVector => _columns == 1;
+		/// <summary>Determines if the matrix is a 2 component vector.</summary>
+		public override bool Is2x1 => _rows == 2 && _columns == 1;
+		/// <summary>Determines if the matrix is a 3 component vector.</summary>
+		public override bool Is3x1 => _rows == 3 && _columns == 1;
+		/// <summary>Determines if the matrix is a 4 component vector.</summary>
+		public override bool Is4x1 => _rows == 4 && _columns == 1;
+		/// <summary>Determines if the matrix is a 2 square matrix.</summary>
+		public override bool Is2x2 => _rows == 2 && _columns == 2;
+		/// <summary>Determines if the matrix is a 3 square matrix.</summary>
+		public override bool Is3x3 => _rows == 3 && _columns == 3;
+		/// <summary>Determines if the matrix is a 4 square matrix.</summary>
+		public override bool Is4x4 => _rows == 4 && _columns == 4;
+
+		/// <summary>Standard row-major matrix indexing.</summary>
+		/// <param name="row">The row index.</param>
+		/// <param name="column">The column index.</param>
+		/// <returns>The value at the given indeces.</returns>
+		public override T this[int row, int column]
 		{
 			get
 			{
@@ -74,7 +1369,7 @@ namespace Towel.Mathematics
 		/// <summary>Indexing of the flattened array representing the matrix.</summary>
 		/// <param name="flatIndex">The flattened index of the matrix.</param>
 		/// <returns>The value at the given flattened index.</returns>
-		public T this[int flatIndex]
+		public override T this[int flatIndex]
 		{
 			get
 			{
@@ -98,7 +1393,7 @@ namespace Towel.Mathematics
 
 		#region Debugger Properties
 
-		internal string DebuggerString
+		internal override string DebuggerString
 		{
 			get
 			{
@@ -132,7 +1427,7 @@ namespace Towel.Mathematics
 
 		#region Constructors
 
-		internal Matrix(int rows, int columns, int length)
+		internal MatrixDense(int rows, int columns, int length)
 		{
 			_matrix = new T[length];
 			_rows = rows;
@@ -142,7 +1437,7 @@ namespace Towel.Mathematics
 		/// <summary>Constructs a new default matrix of the given dimensions.</summary>
 		/// <param name="rows">The number of row dimensions.</param>
 		/// <param name="columns">The number of column dimensions.</param>
-		public Matrix(int rows, int columns)
+		public MatrixDense(int rows, int columns)
 		{
 			if (rows < 1)
 			{
@@ -161,19 +1456,15 @@ namespace Towel.Mathematics
 		/// <param name="rows">The number of rows to construct.</param>
 		/// <param name="columns">The number of columns to construct.</param>
 		/// <param name="function">The initialization function.</param>
-		public Matrix(int rows, int columns, Func<int, int, T> function) : this(rows, columns)
-		{
+		public MatrixDense(int rows, int columns, Func<int, int, T> function) : this(rows, columns) =>
 			Format(this, function);
-		}
 
 		/// <summary>Constructs a new matrix and initializes it via function.</summary>
 		/// <param name="rows">The number of rows to construct.</param>
 		/// <param name="columns">The number of columns to construct.</param>
 		/// <param name="function">The initialization function.</param>
-		public Matrix(int rows, int columns, Func<int, T> function) : this(rows, columns)
-		{
+		public MatrixDense(int rows, int columns, Func<int, T> function) : this(rows, columns) =>
 			Format(this, function);
-		}
 
 		/// <summary>
 		/// Creates a new matrix using ROW MAJOR ORDER. The data will be referenced to, so 
@@ -182,7 +1473,7 @@ namespace Towel.Mathematics
 		/// <param name="rows">The number of rows to construct.</param>
 		/// <param name="columns">The number of columns to construct.</param>
 		/// <param name="data">The data of the matrix in ROW MAJOR ORDER.</param>
-		public Matrix(int rows, int columns, params T[] data) : this(rows, columns)
+		public MatrixDense(int rows, int columns, params T[] data) : this(rows, columns)
 		{
 			if (data is null)
 			{
@@ -197,14 +1488,14 @@ namespace Towel.Mathematics
 			_matrix = data;
 		}
 
-		private Matrix(Matrix<T> matrix)
+		private MatrixDense(MatrixDense<T> matrix)
 		{
 			_rows = matrix._rows;
 			_columns = matrix.Columns;
 			_matrix = (matrix._matrix).Clone() as T[];
 		}
 
-		internal Matrix(Vector<T> vector)
+		internal MatrixDense(Vector<T> vector)
 		{
 			_rows = vector.Dimensions;
 			_columns = 1;
@@ -219,7 +1510,7 @@ namespace Towel.Mathematics
 		/// <param name="rows">The number of rows of the matrix.</param>
 		/// <param name="columns">The number of columns of the matrix.</param>
 		/// <returns>The newly constructed zero-matrix.</returns>
-		public static Matrix<T> FactoryZero(int rows, int columns)
+		public new static MatrixDense<T> FactoryZero(int rows, int columns)
 		{
 			if (rows < 1)
 			{
@@ -232,17 +1523,17 @@ namespace Towel.Mathematics
 			return FactoryZeroImplementation(rows, columns);
 		}
 
-		internal static Func<int, int, Matrix<T>> FactoryZeroImplementation = (rows, columns) =>
+		internal static Func<int, int, MatrixDense<T>> FactoryZeroImplementation = (rows, columns) =>
 		{
 			if (Compute.Equal(default(T), Constant<T>.Zero))
 			{
-				FactoryZeroImplementation = (ROWS, COLUMNS) => new Matrix<T>(ROWS, COLUMNS);
+				FactoryZeroImplementation = (ROWS, COLUMNS) => new MatrixDense<T>(ROWS, COLUMNS);
 			}
 			else
 			{
 				FactoryZeroImplementation = (ROWS, COLUMNS) =>
 				{
-					Matrix<T> matrix = new Matrix<T>(ROWS, COLUMNS);
+					MatrixDense<T> matrix = new MatrixDense<T>(ROWS, COLUMNS);
 					matrix._matrix.Format(Constant<T>.Zero);
 					return matrix;
 				};
@@ -254,7 +1545,7 @@ namespace Towel.Mathematics
 		/// <param name="rows">The number of rows of the matrix.</param>
 		/// <param name="columns">The number of columns of the matrix.</param>
 		/// <returns>The newly constructed identity-matrix.</returns>
-		public static Matrix<T> FactoryIdentity(int rows, int columns)
+		public new static MatrixDense<T> FactoryIdentity(int rows, int columns)
 		{
 			if (rows < 1)
 			{
@@ -267,13 +1558,13 @@ namespace Towel.Mathematics
 			return FactoryIdentityImplementation(rows, columns);
 		}
 
-		internal static Func<int, int, Matrix<T>> FactoryIdentityImplementation = (rows, columns) =>
+		internal static Func<int, int, MatrixDense<T>> FactoryIdentityImplementation = (rows, columns) =>
 		{
 			if (Compute.Equal(default(T), Constant<T>.Zero))
 			{
 				FactoryIdentityImplementation = (ROWS, COLUMNS) =>
 				{
-					Matrix<T> matrix = new Matrix<T>(ROWS, COLUMNS);
+					MatrixDense<T> matrix = new MatrixDense<T>(ROWS, COLUMNS);
 					T[] MATRIX = matrix._matrix;
 					int minimum = Compute.Minimum(ROWS, COLUMNS);
 					for (int i = 0; i < minimum; i++)
@@ -287,7 +1578,7 @@ namespace Towel.Mathematics
 			{
 				FactoryIdentityImplementation = (ROWS, COLUMNS) =>
 				{
-					Matrix<T> matrix = new Matrix<T>(ROWS, COLUMNS);
+					MatrixDense<T> matrix = new MatrixDense<T>(ROWS, COLUMNS);
 					Format(matrix, (x, y) => x == y ? Constant<T>.One : Constant<T>.Zero);
 					return matrix;
 				};
@@ -300,7 +1591,7 @@ namespace Towel.Mathematics
 		/// <param name="columns">The number of columns of the matrix.</param>
 		/// <param name="value">The value to assign every spot in the matrix.</param>
 		/// <returns>The newly constructed matrix filled with the uniform value.</returns>
-		public static Matrix<T> FactoryUniform(int rows, int columns, T value)
+		public new static MatrixDense<T> FactoryUniform(int rows, int columns, T value)
 		{
 			if (rows < 1)
 			{
@@ -310,7 +1601,7 @@ namespace Towel.Mathematics
 			{
 				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
 			}
-			Matrix<T> matrix = new Matrix<T>(rows, columns);
+			MatrixDense<T> matrix = new MatrixDense<T>(rows, columns);
 			matrix._matrix.Format(value);
 			return matrix;
 		}
@@ -321,7 +1612,7 @@ namespace Towel.Mathematics
 
 		#region RowMultiplication
 
-		private static void RowMultiplication(Matrix<T> matrix, int row, T scalar)
+		private static void RowMultiplication(MatrixDense<T> matrix, int row, T scalar)
 		{
 			int columns = matrix.Columns;
 			for (int i = 0; i < columns; i++)
@@ -334,7 +1625,7 @@ namespace Towel.Mathematics
 
 		#region RowAddition
 
-		private static void RowAddition(Matrix<T> matrix, int target, int second, T scalar)
+		private static void RowAddition(MatrixDense<T> matrix, int target, int second, T scalar)
 		{
 			int columns = matrix.Columns;
 			for (int i = 0; i < columns; i++)
@@ -347,7 +1638,7 @@ namespace Towel.Mathematics
 
 		#region SwapRows
 
-		private static void SwapRows(Matrix<T> matrix, int row1, int row2)
+		private static void SwapRows(MatrixDense<T> matrix, int row1, int row2)
 		{
 			int columns = matrix.Columns;
 			for (int i = 0; i < columns; i++)
@@ -362,7 +1653,7 @@ namespace Towel.Mathematics
 
 		#region GetCofactor
 
-		private static void GetCofactor(Matrix<T> a, Matrix<T> temp, int p, int q, int n)
+		private static void GetCofactor(MatrixDense<T> a, MatrixDense<T> temp, int p, int q, int n)
 		{
 			int i = 0, j = 0;
 			for (int row = 0; row < n; row++)
@@ -386,14 +1677,14 @@ namespace Towel.Mathematics
 
 		#region GetDeterminant
 
-		private static T GetDeterminant(Matrix<T> a, int n)
+		private static T GetDeterminant(MatrixDense<T> a, int n)
 		{
 			T determinent = Constant<T>.Zero;
 			if (n == 1)
 			{
 				return a.Get(0, 0);
 			}
-			Matrix<T> temp = new Matrix<T>(n, n);
+			MatrixDense<T> temp = new MatrixDense<T>(n, n);
 			T sign = Constant<T>.One;
 			for (int f = 0; f < n; f++)
 			{
@@ -415,7 +1706,7 @@ namespace Towel.Mathematics
 		/// <summary>Determines if the matrix is symetric.</summary>
 		/// <param name="a">The matrix to determine if symetric.</param>
 		/// <returns>True if the matrix is symetric; false if not.</returns>
-		public static bool GetIsSymetric(Matrix<T> a)
+		public static bool GetIsSymetric(MatrixDense<T> a)
 		{
 			if (a is null)
 			{
@@ -442,13 +1733,7 @@ namespace Towel.Mathematics
 
 		/// <summary>Determines if the matrix is symetric.</summary>
 		/// <returns>True if the matrix is symetric; false if not.</returns>
-		public bool IsSymetric
-		{
-			get
-			{
-				return GetIsSymetric(this);
-			}
-		}
+		public override bool IsSymetric => GetIsSymetric(this);
 
 		#endregion
 
@@ -457,7 +1742,7 @@ namespace Towel.Mathematics
 		/// <summary>Negates all the values in a matrix.</summary>
 		/// <param name="a">The matrix to have its values negated.</param>
 		/// <param name="b">The resulting matrix after the negation.</param>
-		private static void Negate(Matrix<T> a, ref Matrix<T> b)
+		private static void Negate(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -474,7 +1759,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = new Matrix<T>(a._rows, a._columns, Length);
+				b = new MatrixDense<T>(a._rows, a._columns, Length);
 				B = b._matrix;
 			}
 			for (int i = 0; i < Length; i++)
@@ -486,9 +1771,9 @@ namespace Towel.Mathematics
 		/// <summary>Negates all the values in a matrix.</summary>
 		/// <param name="a">The matrix to have its values negated.</param>
 		/// <returns>The resulting matrix after the negation.</returns>
-		public static Matrix<T> Negate(Matrix<T> a)
+		public static MatrixDense<T> Negate(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Negate(a, ref b);
 			return b;
 		}
@@ -496,24 +1781,27 @@ namespace Towel.Mathematics
 		/// <summary>Negates all the values in a matrix.</summary>
 		/// <param name="a">The matrix to have its values negated.</param>
 		/// <returns>The resulting matrix after the negation.</returns>
-		public static Matrix<T> operator -(Matrix<T> a)
+		public static MatrixDense<T> operator -(MatrixDense<T> a) =>
+			Negate(a);
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		public override void Negate(ref Matrix<T> b)
 		{
-			return Negate(a);
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			Negate(this, ref c);
+			b = c;
 		}
 
 		/// <summary>Negates all the values in a matrix.</summary>
 		/// <param name="b">The resulting matrix after the negation.</param>
-		public void Negate(ref Matrix<T> b)
-		{
+		public void Negate(ref MatrixDense<T> b) =>
 			Negate(this, ref b);
-		}
 
 		/// <summary>Negates all the values in this matrix.</summary>
 		/// <returns>The resulting matrix after the negation.</returns>
-		public Matrix<T> Negate()
-		{
-			return -this;
-		}
+		public new MatrixDense<T> Negate() =>
+			-this;
 
 		#endregion
 
@@ -523,7 +1811,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the addition.</param>
 		/// <param name="b">The right matrix of the addition.</param>
 		/// <param name="c">The resulting matrix after the addition.</param>
-		private static void Add(Matrix<T> a, Matrix<T> b, ref Matrix<T> c)
+		private static void Add(MatrixDense<T> a, MatrixDense<T> b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -551,7 +1839,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = new Matrix<T>(a._rows, a._columns, Length);
+				c = new MatrixDense<T>(a._rows, a._columns, Length);
 				C = c._matrix;
 			}
 			for (int i = 0; i < Length; i++)
@@ -564,9 +1852,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the addition.</param>
 		/// <param name="b">The right matrix of the addition.</param>
 		/// <returns>The resulting matrix after the addition.</returns>
-		public static Matrix<T> Add(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> Add(MatrixDense<T> a, MatrixDense<T> b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Add(a, b, ref c);
 			return c;
 		}
@@ -575,26 +1863,37 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the addition.</param>
 		/// <param name="b">The right matrix of the addition.</param>
 		/// <returns>The resulting matrix after teh addition.</returns>
-		public static Matrix<T> operator +(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> operator +(MatrixDense<T> a, MatrixDense<T> b) =>
+			Add(a, b);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public override void Add(Matrix<T> b, ref Matrix<T> c)
 		{
-			return Add(a, b);
+			if (!(b is MatrixDense<T> bDense))
+			{
+				base.Subtract(b, ref c);
+			}
+			else
+			{
+				MatrixDense<T> d = c is MatrixDense<T> cDense ? cDense : null;
+				Add(bDense, ref d);
+				c = d;
+			}
 		}
 
 		/// <summary>Does standard addition of two matrices.</summary>
 		/// <param name="b">The right matrix of the addition.</param>
 		/// <param name="c">The resulting matrix after the addition.</param>
-		public void Add(Matrix<T> b, ref Matrix<T> c)
-		{
+		public void Add(MatrixDense<T> b, ref MatrixDense<T> c) =>
 			Add(this, b, ref c);
-		}
 
 		/// <summary>Does a standard matrix addition.</summary>
 		/// <param name="b">The matrix to add to this matrix.</param>
 		/// <returns>The resulting matrix after the addition.</returns>
-		public Matrix<T> Add(Matrix<T> b)
-		{
-			return this + b;
-		}
+		public MatrixDense<T> Add(MatrixDense<T> b) =>
+			this + b;
 
 		#endregion
 
@@ -604,7 +1903,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the subtraction.</param>
 		/// <param name="b">The right matrix of the subtraction.</param>
 		/// <param name="c">The resulting matrix after the subtraction.</param>
-		private static void Subtract(Matrix<T> a, Matrix<T> b, ref Matrix<T> c)
+		private static void Subtract(MatrixDense<T> a, MatrixDense<T> b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -632,7 +1931,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = new Matrix<T>(a._rows, a._columns, Length);
+				c = new MatrixDense<T>(a._rows, a._columns, Length);
 				C = c._matrix;
 			}
 			for (int i = 0; i < Length; i++)
@@ -645,9 +1944,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the subtraction.</param>
 		/// <param name="b">The right matrix of the subtraction.</param>
 		/// <returns>The resulting matrix after the subtraction.</returns>
-		public static Matrix<T> Subtract(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> Subtract(MatrixDense<T> a, MatrixDense<T> b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Subtract(a, b, ref c);
 			return c;
 		}
@@ -656,26 +1955,37 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the subtraction.</param>
 		/// <param name="b">The right matrix of the subtraction.</param>
 		/// <returns>The resulting matrix after the subtraction.</returns>
-		public static Matrix<T> operator -(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> operator -(MatrixDense<T> a, MatrixDense<T> b) =>
+			Subtract(a, b);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public override void Subtract(Matrix<T> b, ref Matrix<T> c)
 		{
-			return Subtract(a, b);
+			if (!(b is MatrixDense<T> bDense))
+			{
+				base.Subtract(b, ref c);
+			}
+			else
+			{
+				MatrixDense<T> d = c is MatrixDense<T> cDense ? cDense : null;
+				Subtract(bDense, ref d);
+				c = d;
+			}
 		}
 
 		/// <summary>Does a standard matrix subtraction.</summary>
 		/// <param name="b">The right matrix of the subtraction.</param>
 		/// <param name="c">The resulting matrix after the subtraction.</param>
-		public void Subtract(Matrix<T> b, ref Matrix<T> c)
-		{
+		public void Subtract(MatrixDense<T> b, ref MatrixDense<T> c) =>
 			Subtract(this, b, ref c);
-		}
 
 		/// <summary>Does a standard matrix subtraction.</summary>
 		/// <param name="b">The right matrix of the subtraction.</param>
 		/// <returns>The resulting matrix after the subtraction.</returns>
-		public Matrix<T> Subtract(Matrix<T> b)
-		{
-			return this - b;
-		}
+		public MatrixDense<T> Subtract(MatrixDense<T> b) =>
+			this - b;
 
 		#endregion
 
@@ -685,7 +1995,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right matrix of the multiplication.</param>
 		/// <param name="c">The resulting matrix of the multiplication.</param>
-		public static void Multiply(Matrix<T> a, Matrix<T> b, ref Matrix<T> c)
+		public static void Multiply(MatrixDense<T> a, MatrixDense<T> b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -702,17 +2012,17 @@ namespace Towel.Mathematics
 			}
 			if (object.ReferenceEquals(a, b) && object.ReferenceEquals(a, c))
 			{
-				Matrix<T> clone = a.Clone();
+				MatrixDense<T> clone = (MatrixDense < T > )a.Clone();
 				a = clone;
 				b = clone;
 			}
 			else if (object.ReferenceEquals(a, c))
 			{
-				a = a.Clone();
+				a = (MatrixDense<T>)a.Clone();
 			}
 			else if (object.ReferenceEquals(b, c))
 			{
-				b = b.Clone();
+				b = (MatrixDense<T>)b.Clone();
 			}
 			int c_Rows = a._rows;
 			int a_Columns = a._columns;
@@ -728,7 +2038,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = new Matrix<T>(c_Rows, c_Columns);
+				c = new MatrixDense<T>(c_Rows, c_Columns);
 				C = c._matrix;
 			}
 			for (int i = 0; i < c_Rows; i++)
@@ -751,9 +2061,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right matrix of the multiplication.</param>
 		/// <returns>The resulting matrix of the multiplication.</returns>
-		public static Matrix<T> Multiply(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> Multiply(MatrixDense<T> a, MatrixDense<T> b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Multiply(a, b, ref c);
 			return c;
 		}
@@ -762,26 +2072,37 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right matrix of the multiplication.</param>
 		/// <returns>The resulting matrix of the multiplication.</returns>
-		public static Matrix<T> operator *(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> operator *(MatrixDense<T> a, MatrixDense<T> b) =>
+			Multiply(a, b);
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public override void Multiply(Matrix<T> b, ref Matrix<T> c)
 		{
-			return Multiply(a, b);
+			if (!(b is MatrixDense<T> bDense))
+			{
+				base.Multiply(b, ref c);
+			}
+			else
+			{
+				MatrixDense<T> d = c is MatrixDense<T> cDense ? cDense : null;
+				Multiply(bDense, ref d);
+				c = d;
+			}
 		}
 
 		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
 		/// <param name="b">The right matrix of the multiplication.</param>
 		/// <param name="c">The resulting matrix of the multiplication.</param>
-		public void Multiply(Matrix<T> b, ref Matrix<T> c)
-		{
+		public void Multiply(MatrixDense<T> b, ref MatrixDense<T> c) =>
 			Multiply(this, b, ref c);
-		}
 
 		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
 		/// <param name="b">The right matrix of the multiplication.</param>
 		/// <returns>The resulting matrix of the multiplication.</returns>
-		public Matrix<T> Multiply(Matrix<T> b)
-		{
-			return this * b;
-		}
+		public MatrixDense<T> Multiply(MatrixDense<T> b) =>
+			this * b;
 
 		#endregion
 
@@ -791,7 +2112,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right vector of the multiplication.</param>
 		/// <param name="c">The resulting vector of the multiplication.</param>
-		private static void Multiply(Matrix<T> a, Vector<T> b, ref Vector<T> c)
+		private static void Multiply(MatrixDense<T> a, Vector<T> b, ref Vector<T> c)
 		{
 			if (a is null)
 			{
@@ -836,7 +2157,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right vector of the multiplication.</param>
 		/// <returns>The resulting vector of the multiplication.</returns>
-		public static Vector<T> Multiply(Matrix<T> a, Vector<T> b)
+		public static Vector<T> Multiply(MatrixDense<T> a, Vector<T> b)
 		{
 			Vector<T> c = null;
 			Multiply(a, b, ref c);
@@ -847,26 +2168,20 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the multiplication.</param>
 		/// <param name="b">The right vector of the multiplication.</param>
 		/// <returns>The resulting vector of the multiplication.</returns>
-		public static Vector<T> operator *(Matrix<T> a, Vector<T> b)
-		{
-			return Multiply(a, b);
-		}
+		public static Vector<T> operator *(MatrixDense<T> a, Vector<T> b) =>
+			Multiply(a, b);
 
 		/// <summary>Does a matrix-vector multiplication.</summary>
 		/// <param name="b">The right vector of the multiplication.</param>
 		/// <param name="c">The resulting vector of the multiplication.</param>
-		public void Multiply(Vector<T> b, ref Vector<T> c)
-		{
+		public override void Multiply(Vector<T> b, ref Vector<T> c) =>
 			Multiply(this, b, ref c);
-		}
 
 		/// <summary>Does a matrix-vector multiplication.</summary>
 		/// <param name="b">The right vector of the multiplication.</param>
 		/// <returns>The resulting vector of the multiplication.</returns>
-		public Vector<T> Multiply(Vector<T> b)
-		{
-			return this * b;
-		}
+		public new Vector<T> Multiply(Vector<T> b) =>
+			this * b;
 
 		#endregion
 
@@ -876,7 +2191,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to have the values multiplied.</param>
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <param name="c">The resulting matrix after the multiplications.</param>
-		private static void Multiply(Matrix<T> a, T b, ref Matrix<T> c)
+		private static void Multiply(MatrixDense<T> a, T b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -893,7 +2208,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = new Matrix<T>(a._rows, a._columns, Length);
+				c = new MatrixDense<T>(a._rows, a._columns, Length);
 				C = c._matrix;
 			}
 			for (int i = 0; i < Length; i++)
@@ -906,9 +2221,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to have the values multiplied.</param>
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <returns>The resulting matrix after the multiplications.</returns>
-		public static Matrix<T> Multiply(Matrix<T> a, T b)
+		public static MatrixDense<T> Multiply(MatrixDense<T> a, T b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Multiply(a, b, ref c);
 			return c;
 		}
@@ -917,7 +2232,7 @@ namespace Towel.Mathematics
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <param name="a">The matrix to have the values multiplied.</param>
 		/// <returns>The resulting matrix after the multiplications.</returns>
-		public static Matrix<T> Multiply(T b, Matrix<T> a)
+		public static MatrixDense<T> Multiply(T b, MatrixDense<T> a)
 		{
 			return Multiply(a, b);
 		}
@@ -926,7 +2241,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to have the values multiplied.</param>
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <returns>The resulting matrix after the multiplications.</returns>
-		public static Matrix<T> operator *(Matrix<T> a, T b)
+		public static MatrixDense<T> operator *(MatrixDense<T> a, T b)
 		{
 			return Multiply(a, b);
 		}
@@ -935,7 +2250,7 @@ namespace Towel.Mathematics
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <param name="a">The matrix to have the values multiplied.</param>
 		/// <returns>The resulting matrix after the multiplications.</returns>
-		public static Matrix<T> operator *(T b, Matrix<T> a)
+		public static MatrixDense<T> operator *(T b, MatrixDense<T> a)
 		{
 			return Multiply(b, a);
 		}
@@ -943,7 +2258,17 @@ namespace Towel.Mathematics
 		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <param name="c">The resulting matrix after the multiplications.</param>
-		public void Multiply(T b, ref Matrix<T> c)
+		public override void Multiply(T b, ref Matrix<T> c)
+		{
+			MatrixDense<T> d = c is MatrixDense<T> cDense ? cDense : null;
+			Multiply(this, b, ref d);
+			c = d;
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		public void Multiply(T b, ref MatrixDense<T> c)
 		{
 			Multiply(this, b, ref c);
 		}
@@ -951,7 +2276,7 @@ namespace Towel.Mathematics
 		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
 		/// <param name="b">The scalar to multiply the values by.</param>
 		/// <returns>The resulting matrix after the multiplications.</returns>
-		public Matrix<T> Multiply(T b)
+		public MatrixDense<T> Multiply(T b)
 		{
 			return this * b;
 		}
@@ -964,7 +2289,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to divide the values of.</param>
 		/// <param name="b">The scalar to divide all the matrix values by.</param>
 		/// <param name="c">The resulting matrix after the division.</param>
-		private static void Divide(Matrix<T> a, T b, ref Matrix<T> c)
+		private static void Divide(MatrixDense<T> a, T b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -981,7 +2306,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = new Matrix<T>(a._rows, a._columns, Length);
+				c = new MatrixDense<T>(a._rows, a._columns, Length);
 				C = c._matrix;
 			}
 			for (int i = 0; i < Length; i++)
@@ -990,14 +2315,13 @@ namespace Towel.Mathematics
 			}
 		}
 
-
 		/// <summary>Divides all the values in the matrix by a scalar.</summary>
 		/// <param name="a">The matrix to divide the values of.</param>
 		/// <param name="b">The scalar to divide all the matrix values by.</param>
 		/// <returns>The resulting matrix after the division.</returns>
-		public static Matrix<T> Divide(Matrix<T> a, T b)
+		public static MatrixDense<T> Divide(MatrixDense<T> a, T b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Divide(a, b, ref c);
 			return c;
 		}
@@ -1006,26 +2330,31 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to divide the values of.</param>
 		/// <param name="b">The scalar to divide all the matrix values by.</param>
 		/// <returns>The resulting matrix after the division.</returns>
-		public static Matrix<T> operator /(Matrix<T> a, T b)
+		public static MatrixDense<T> operator /(MatrixDense<T> a, T b) => Divide(a, b);
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		public override void Divide(T b, ref Matrix<T> c)
 		{
-			return Divide(a, b);
+			MatrixDense<T> d = null;
+			if (c is MatrixDense<T> cDense)
+			{
+				d = cDense;
+			}
+			Divide(this, b, ref d);
+			c = d;
 		}
 
 		/// <summary>Divides all the values in the matrix by a scalar.</summary>
 		/// <param name="b">The scalar to divide all the matrix values by.</param>
 		/// <param name="c">The resulting matrix after the division.</param>
-		public void Divide(T b, ref Matrix<T> c)
-		{
-			Divide(this, b, ref c);
-		}
+		public void Divide(T b, ref MatrixDense<T> c) => Divide(this, b, ref c);
 
 		/// <summary>Divides all the values in the matrix by a scalar.</summary>
 		/// <param name="b">The scalar to divide all the matrix values by.</param>
 		/// <returns>The resulting matrix after the division.</returns>
-		public Matrix<T> Divide(T b)
-		{
-			return this / b;
-		}
+		public new MatrixDense<T> Divide(T b) => this / b;
 
 		#endregion
 
@@ -1035,7 +2364,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to be powered by.</param>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <param name="c">The resulting matrix of the power operation.</param>
-		private static void Power(Matrix<T> a, int b, ref Matrix<T> c)
+		private static void Power(MatrixDense<T> a, int b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -1059,7 +2388,7 @@ namespace Towel.Mathematics
 				}
 				else
 				{
-					c = Matrix<T>.FactoryIdentity(a._rows, a._columns);
+					c = MatrixDense<T>.FactoryIdentity(a._rows, a._columns);
 				}
 				return;
 			}
@@ -1076,13 +2405,13 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				c = a.Clone();
+				c = (MatrixDense<T>)a.Clone();
 			}
-			Matrix<T> d = new Matrix<T>(a._rows, a._columns, a._matrix.Length);
+			MatrixDense<T> d = new MatrixDense<T>(a._rows, a._columns, a._matrix.Length);
 			for (int i = 0; i < b; i++)
 			{
 				Multiply(c, a, ref d);
-				Matrix<T> temp = d;
+				MatrixDense<T> temp = d;
 				d = c;
 				c = d;
 			}
@@ -1092,9 +2421,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to be powered by.</param>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <returns>The resulting matrix of the power operation.</returns>
-		public static Matrix<T> Power(Matrix<T> a, int b)
+		public static MatrixDense<T> Power(MatrixDense<T> a, int b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			Power(a, b, ref c);
 			return c;
 		}
@@ -1103,7 +2432,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to be powered by.</param>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <returns>The resulting matrix of the power operation.</returns>
-		public static Matrix<T> operator ^(Matrix<T> a, int b)
+		public static MatrixDense<T> operator ^(MatrixDense<T> a, int b)
 		{
 			return Power(a, b);
 		}
@@ -1111,7 +2440,21 @@ namespace Towel.Mathematics
 		/// <summary>Applies a power to a square matrix.</summary>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <param name="c">The resulting matrix of the power operation.</param>
-		public void Power(int b, ref Matrix<T> c)
+		public override void Power(int b, ref Matrix<T> c)
+		{
+			MatrixDense<T> d = null;
+			if (c is MatrixDense<T> cDense)
+			{
+				d = cDense;
+			}
+			Power(this, b, ref d);
+			c = d;
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		public void Power(int b, ref MatrixDense<T> c)
 		{
 			Power(this, b, ref c);
 		}
@@ -1119,7 +2462,7 @@ namespace Towel.Mathematics
 		/// <summary>Applies a power to a square matrix.</summary>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <returns>The resulting matrix of the power operation.</returns>
-		public Matrix<T> Power(int b)
+		public new MatrixDense<T> Power(int b)
 		{
 			return this ^ b;
 		}
@@ -1131,7 +2474,7 @@ namespace Towel.Mathematics
 		/// <summary>Computes the determinent of a square matrix.</summary>
 		/// <param name="a">The matrix to compute the determinent of.</param>
 		/// <returns>The computed determinent.</returns>
-		public static T Determinent(Matrix<T> a)
+		public static T Determinent(MatrixDense<T> a)
 		{
 			if (a is null)
 			{
@@ -1192,10 +2535,8 @@ namespace Towel.Mathematics
 
 		/// <summary>Computes the determinent of a square matrix.</summary>
 		/// <returns>The computed determinent.</returns>
-		public T Determinent()
-		{
-			return Determinent(this);
-		}
+		public override T Determinent() =>
+			Determinent(this);
 
 		#endregion
 
@@ -1204,7 +2545,7 @@ namespace Towel.Mathematics
 		/// <summary>Computes the trace of a square matrix.</summary>
 		/// <param name="a">The matrix to compute the trace of.</param>
 		/// <returns>The computed trace.</returns>
-		public static T Trace(Matrix<T> a)
+		public static T Trace(MatrixDense<T> a)
 		{
 			if (a is null)
 			{
@@ -1228,10 +2569,8 @@ namespace Towel.Mathematics
 
 		/// <summary>Computes the trace of a square matrix.</summary>
 		/// <returns>The computed trace.</returns>
-		public T Trace()
-		{
-			return Trace(this);
-		}
+		public override T Trace() =>
+			Trace(this);
 
 		#endregion
 
@@ -1242,7 +2581,7 @@ namespace Towel.Mathematics
 		/// <param name="row">The restricted row to form the minor.</param>
 		/// <param name="column">The restricted column to form the minor.</param>
 		/// <param name="b">The minor of the matrix.</param>
-		private static void Minor(Matrix<T> a, int row, int column, ref Matrix<T> b)
+		private static void Minor(MatrixDense<T> a, int row, int column, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -1262,7 +2601,7 @@ namespace Towel.Mathematics
 			}
 			if (object.ReferenceEquals(a, b))
 			{
-				a = a.Clone();
+				a = (MatrixDense<T>)a.Clone();
 			}
 			int a_rows = a._rows;
 			int a_columns = a._columns;
@@ -1271,7 +2610,7 @@ namespace Towel.Mathematics
 			int b_length = b_rows * b_columns;
 			if (b is null || b._matrix.Length != b_length)
 			{
-				b = new Matrix<T>(b_rows, b_columns, b_length);
+				b = new MatrixDense<T>(b_rows, b_columns, b_length);
 			}
 			else
 			{
@@ -1309,9 +2648,9 @@ namespace Towel.Mathematics
 		/// <param name="row">The restricted row to form the minor.</param>
 		/// <param name="column">The restricted column to form the minor.</param>
 		/// <returns>The minor of the matrix.</returns>
-		public static Matrix<T> Minor(Matrix<T> a, int row, int column)
+		public static MatrixDense<T> Minor(MatrixDense<T> a, int row, int column)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Minor(a, row, column, ref b);
 			return b;
 		}
@@ -1320,19 +2659,30 @@ namespace Towel.Mathematics
 		/// <param name="row">The restricted row to form the minor.</param>
 		/// <param name="column">The restricted column to form the minor.</param>
 		/// <param name="b">The minor of the matrix.</param>
-		public void Minor(int row, int column, ref Matrix<T> b)
+		public override void Minor(int row, int column, ref Matrix<T> b)
 		{
-			Minor(this, row, column, ref b);
+			MatrixDense<T> c = null;
+			if (b is MatrixDense<T> bDense)
+			{
+				c = bDense;
+			}
+			Minor(this, row, column, ref c);
+			b = c;
 		}
 
 		/// <summary>Gets the minor of a matrix.</summary>
 		/// <param name="row">The restricted row to form the minor.</param>
 		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		public void Minor(int row, int column, ref MatrixDense<T> b) =>
+			Minor(this, row, column, ref b);
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
 		/// <returns>The minor of the matrix.</returns>
-		public Matrix<T> Minor(int row, int column)
-		{
-			return Minor(this, row, column);
-		}
+		public new MatrixDense<T> Minor(int row, int column) =>
+			Minor(this, row, column);
 
 		#endregion
 
@@ -1343,7 +2693,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the concatenation.</param>
 		/// <param name="b">The right matrix of the concatenation.</param>
 		/// <param name="c">The resulting matrix of the concatenation.</param>
-		private static void ConcatenateRowWise(Matrix<T> a, Matrix<T> b, ref Matrix<T> c)
+		private static void ConcatenateRowWise(MatrixDense<T> a, MatrixDense<T> b, ref MatrixDense<T> c)
 		{
 			if (a is null)
 			{
@@ -1367,7 +2717,7 @@ namespace Towel.Mathematics
 				object.ReferenceEquals(a, c) ||
 				object.ReferenceEquals(b, c))
 			{
-				c = new Matrix<T>(c_rows, c_columns, c_length);
+				c = new MatrixDense<T>(c_rows, c_columns, c_length);
 			}
 			else
 			{
@@ -1401,9 +2751,9 @@ namespace Towel.Mathematics
 		/// <param name="a">The left matrix of the concatenation.</param>
 		/// <param name="b">The right matrix of the concatenation.</param>
 		/// <returns>The resulting matrix of the concatenation.</returns>
-		public static Matrix<T> ConcatenateRowWise(Matrix<T> a, Matrix<T> b)
+		public static MatrixDense<T> ConcatenateRowWise(MatrixDense<T> a, MatrixDense<T> b)
 		{
-			Matrix<T> c = null;
+			MatrixDense<T> c = null;
 			ConcatenateRowWise(a, b, ref c);
 			return c;
 		}
@@ -1412,19 +2762,35 @@ namespace Towel.Mathematics
 		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
 		/// <param name="b">The right matrix of the concatenation.</param>
 		/// <param name="c">The resulting matrix of the concatenation.</param>
-		public void ConcatenateRowWise(Matrix<T> b, ref Matrix<T> c)
+		public override void ConcatenateRowWise(Matrix<T> b, ref Matrix<T> c)
 		{
-			ConcatenateRowWise(this, b, ref c);
+			if (b is MatrixDense<T> bDense)
+			{
+				MatrixDense<T> d = c is MatrixDense<T> cDense
+					? cDense
+					: null;
+				ConcatenateRowWise(this, bDense, ref d);
+				c = d;
+			}
+			else
+			{
+				base.ConcatenateRowWise(b, ref c);
+			}
 		}
 
 		/// <summary>Combines two matrices from left to right 
 		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
 		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		public void ConcatenateRowWise(MatrixDense<T> b, ref MatrixDense<T> c) =>
+			ConcatenateRowWise(this, b, ref c);
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
 		/// <returns>The resulting matrix of the concatenation.</returns>
-		public Matrix<T> ConcatenateRowWise(Matrix<T> b)
-		{
-			return ConcatenateRowWise(this, b);
-		}
+		public MatrixDense<T> ConcatenateRowWise(MatrixDense<T> b) =>
+			ConcatenateRowWise(this, b);
 
 		#endregion
 
@@ -1434,7 +2800,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
 		/// <param name="b">The echelon of the matrix (aka REF).</param>
 		/// <bug>Failing for non-floating point rational types due to zero how values are being compared.</bug>
-		private static void Echelon(Matrix<T> a, ref Matrix<T> b)
+		private static void Echelon(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -1442,7 +2808,7 @@ namespace Towel.Mathematics
 			}
 			if (ReferenceEquals(a, b))
 			{
-				a = a.Clone();
+				a = (MatrixDense<T>)a.Clone();
 			}
 			int Rows = a.Rows;
 			if (b != null && b._matrix.Length == a._matrix.Length)
@@ -1453,7 +2819,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = a.Clone();
+				b = (MatrixDense<T>)a.Clone();
 			}
 			for (int i = 0; i < Rows; i++)
 			{
@@ -1494,26 +2860,31 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
 		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
 		/// <returns>The echelon of the matrix (aka REF).</returns>
-		public static Matrix<T> Echelon(Matrix<T> a)
+		public static MatrixDense<T> Echelon(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Echelon(a, ref b);
 			return b;
 		}
 
 		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
 		/// <param name="b">The echelon of the matrix (aka REF).</param>
-		public void Echelon(ref Matrix<T> b)
+		public override void Echelon(ref Matrix<T> b)
 		{
-			Echelon(this, ref b);
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			Echelon(this, ref c);
+			b = c;
 		}
 
 		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		public void Echelon(ref MatrixDense<T> b) =>
+			Echelon(this, ref b);
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
 		/// <returns>The echelon of the matrix (aka REF).</returns>
-		public Matrix<T> Echelon()
-		{
-			return Echelon(this);
-		}
+		public new MatrixDense<T> Echelon() =>
+			Echelon(this);
 
 		#endregion
 
@@ -1522,7 +2893,7 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
 		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
 		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
-		private static void ReducedEchelon(Matrix<T> a, ref Matrix<T> b)
+		private static void ReducedEchelon(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -1532,7 +2903,7 @@ namespace Towel.Mathematics
 			int Columns = a.Columns;
 			if (object.ReferenceEquals(a, b))
 			{
-				b = a.Clone();
+				b = (MatrixDense<T>)a.Clone();
 			}
 			else if (b != null && b._matrix.Length == a._matrix.Length)
 			{
@@ -1542,7 +2913,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = a.Clone();
+				b = (MatrixDense<T>)a.Clone();
 			}
 			int lead = 0;
 			for (int r = 0; r < Rows; r++)
@@ -1658,26 +3029,31 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
 		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
 		/// <returns>The reduced echelon of the matrix (aka RREF).</returns>
-		public static Matrix<T> ReducedEchelon(Matrix<T> a)
+		public static MatrixDense<T> ReducedEchelon(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			ReducedEchelon(a, ref b);
 			return b;
 		}
 
 		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
 		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
-		public void ReducedEchelon(ref Matrix<T> b)
+		public override void ReducedEchelon(ref Matrix<T> b)
 		{
-			ReducedEchelon(this, ref b);
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			ReducedEchelon(this, ref c);
+			b = c;
 		}
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		public void ReducedEchelon(ref MatrixDense<T> b) =>
+			ReducedEchelon(this, ref b);
 
 		/// <summary>Matrixs the reduced echelon form of this matrix (aka RREF).</summary>
 		/// <returns>The computed reduced echelon form of this matrix (aka RREF).</returns>
-		public Matrix<T> ReducedEchelon()
-		{
-			return ReducedEchelon(this);
-		}
+		public new MatrixDense<T> ReducedEchelon() =>
+			ReducedEchelon(this);
 
 		#endregion
 
@@ -1686,7 +3062,7 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the inverse of a matrix.</summary>
 		/// <param name="a">The matrix to calculate the inverse of.</param>
 		/// <param name="b">The inverse of the matrix.</param>
-		private static void Inverse(Matrix<T> a, ref Matrix<T> b)
+		private static void Inverse(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -1701,12 +3077,12 @@ namespace Towel.Mathematics
 			{
 				throw new MathematicsException("Singular matrix encountered during inverse caluculation (cannot be inversed).");
 			}
-			Matrix<T> adjoint = a.Adjoint();
+			MatrixDense<T> adjoint = a.Adjoint();
 			int dimension = a.Rows;
 			int Length = a.Length;
 			if (object.ReferenceEquals(a, b))
 			{
-				b = a.Clone();
+				b = (MatrixDense<T>)a.Clone();
 			}
 			else if (b != null && b.Length == Length)
 			{
@@ -1715,7 +3091,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = new Matrix<T>(dimension, dimension, Length);
+				b = new MatrixDense<T>(dimension, dimension, Length);
 			}
 			for (int i = 0; i < dimension; i++)
 			{
@@ -1804,19 +3180,29 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the inverse of a matrix.</summary>
 		/// <param name="a">The matrix to calculate the inverse of.</param>
 		/// <returns>The inverse of the matrix.</returns>
-		public static Matrix<T> Inverse(Matrix<T> a)
+		public static MatrixDense<T> Inverse(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Inverse(a, ref b);
 			return b;
 		}
 
 		/// <summary>Matrixs the inverse of this matrix.</summary>
 		/// <returns>The inverse of this matrix.</returns>
-		public Matrix<T> Inverse()
+		public override void Inverse(ref Matrix<T> b)
 		{
-			return Inverse(this);
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			Inverse(this, ref c);
+			b = c;
 		}
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public void Inverse(ref MatrixDense<T> b) => Inverse(this, ref b);
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public new MatrixDense<T> Inverse() => Inverse(this);
 
 		#endregion
 
@@ -1825,7 +3211,7 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the adjoint of a matrix.</summary>
 		/// <param name="a">The matrix to calculate the adjoint of.</param>
 		/// <param name="b">The adjoint of the matrix.</param>
-		private static void Adjoint(Matrix<T> a, ref Matrix<T> b)
+		private static void Adjoint(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -1839,7 +3225,7 @@ namespace Towel.Mathematics
 			int Length = a.Length;
 			if (object.ReferenceEquals(a, b))
 			{
-				b = a.Clone();
+				b = (MatrixDense<T>)a.Clone();
 			}
 			else if (b != null && b.Length == Length)
 			{
@@ -1848,7 +3234,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = new Matrix<T>(dimension, dimension, Length);
+				b = new MatrixDense<T>(dimension, dimension, Length);
 			}
 
 			if (dimension == 1)
@@ -1857,7 +3243,7 @@ namespace Towel.Mathematics
 				return;
 			}
 			T sign = Constant<T>.One;
-			Matrix<T> temp = new Matrix<T>(dimension, dimension, Length);
+			MatrixDense<T> temp = new MatrixDense<T>(dimension, dimension, Length);
 			for (int i = 0; i < dimension; i++)
 			{
 				for (int j = 0; j < dimension; j++)
@@ -1915,26 +3301,31 @@ namespace Towel.Mathematics
 		/// <summary>Calculates the adjoint of a matrix.</summary>
 		/// <param name="a">The matrix to calculate the adjoint of.</param>
 		/// <returns>The adjoint of the matrix.</returns>
-		public static Matrix<T> Adjoint(Matrix<T> a)
+		public static MatrixDense<T> Adjoint(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Adjoint(a, ref b);
 			return b;
 		}
 
 		/// <summary>Calculates the adjoint of a matrix.</summary>
 		/// <param name="b">The adjoint of the matrix.</param>
-		public void Adjoint(ref Matrix<T> b)
+		public override void Adjoint(ref Matrix<T> b)
 		{
-			Adjoint(this, ref b);
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			Adjoint(this, ref c);
+			b = c;
 		}
 
 		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="b">The adjoint of the matrix.</param>
+		public void Adjoint(ref MatrixDense<T> b) =>
+			Adjoint(this, ref b);
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
 		/// <returns>The adjoint of the matrix.</returns>
-		public Matrix<T> Adjoint()
-		{
-			return Adjoint(this);
-		}
+		public new MatrixDense<T> Adjoint() =>
+			Adjoint(this);
 
 		#endregion
 
@@ -1943,9 +3334,8 @@ namespace Towel.Mathematics
 		/// <summary>Returns the transpose of a matrix.</summary>
 		/// <param name="a">The matrix to transpose.</param>
 		/// <param name="b">The transpose of the matrix.</param>
-		private static void Transpose(Matrix<T> a, ref Matrix<T> b)
+		private static void Transpose(MatrixDense<T> a, ref MatrixDense<T> b)
 		{
-
 			if (a is null)
 			{
 				throw new ArgumentNullException(nameof(a));
@@ -1968,7 +3358,7 @@ namespace Towel.Mathematics
 			}
 			else
 			{
-				b = new Matrix<T>(Rows, Columns, Length);
+				b = new MatrixDense<T>(Rows, Columns, Length);
 			}
 			for (int i = 0; i < Rows; i++)
 			{
@@ -1982,26 +3372,31 @@ namespace Towel.Mathematics
 		/// <summary>Returns the transpose of a matrix.</summary>
 		/// <param name="a">The matrix to transpose.</param>
 		/// <returns>The transpose of the matrix.</returns>
-		public static Matrix<T> Transpose(Matrix<T> a)
+		public static MatrixDense<T> Transpose(MatrixDense<T> a)
 		{
-			Matrix<T> b = null;
+			MatrixDense<T> b = null;
 			Transpose(a, ref b);
 			return b;
 		}
 
 		/// <summary>Returns the transpose of a matrix.</summary>
 		/// <param name="b">The transpose of the matrix.</param>
-		public void Transpose(ref Matrix<T> b)
-		{
+		public void Transpose(ref MatrixDense<T> b) =>
 			Transpose(this, ref b);
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="b">The transpose of the matrix.</param>
+		public override void Transpose(ref Matrix<T> b)
+		{
+			MatrixDense<T> c = b is MatrixDense<T> bDense ? bDense : null;
+			Transpose(this, ref c);
+			b = c;
 		}
 
 		/// <summary>Returns the transpose of a matrix.</summary>
 		/// <returns>The transpose of the matrix.</returns>
-		public Matrix<T> Transpose()
-		{
-			return Transpose(this);
-		}
+		public new MatrixDense<T> Transpose() =>
+			Transpose(this);
 
 		#endregion
 
@@ -2011,12 +3406,12 @@ namespace Towel.Mathematics
 		/// <param name="matrix">The matrix to decompose.</param>
 		/// <param name="lower">The computed lower triangular matrix.</param>
 		/// <param name="upper">The computed upper triangular matrix.</param>
-		public static void DecomposeLowerUpper(Matrix<T> matrix, ref Matrix<T> lower, ref Matrix<T> upper)
+		public static void DecomposeLowerUpper(MatrixDense<T> matrix, ref MatrixDense<T> lower, ref MatrixDense<T> upper)
 		{
 			// Note: this method can be optimized...
 
-			lower = Matrix<T>.FactoryIdentity(matrix.Rows, matrix.Columns);
-			upper = matrix.Clone();
+			lower = MatrixDense<T>.FactoryIdentity(matrix.Rows, matrix.Columns);
+			upper = (MatrixDense<T>)matrix.Clone();
 			int[] permutation = new int[matrix.Rows];
 			for (int i = 0; i < matrix.Rows; i++)
 			{
@@ -2116,9 +3511,19 @@ namespace Towel.Mathematics
 		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
 		/// <param name="lower">The computed lower triangular matrix.</param>
 		/// <param name="upper">The computed upper triangular matrix.</param>
-		public void DecomposeLowerUpper(ref Matrix<T> lower, ref Matrix<T> upper)
+		public void DecomposeLowerUpper(ref MatrixDense<T> lower, ref MatrixDense<T> upper)
 		{
 			DecomposeLowerUpper(this, ref lower, ref upper);
+		}
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public override void DecomposeLowerUpper(ref Matrix<T> lower, ref Matrix<T> upper)
+		{
+			MatrixDense<T> LOWER = lower is MatrixDense<T> lowerDense ? lowerDense : null;
+			MatrixDense<T> UPPER = upper is MatrixDense<T> upperDense ? upperDense : null;
+			DecomposeLowerUpper(this, ref LOWER, ref UPPER);
 		}
 
 		#endregion
@@ -2130,7 +3535,15 @@ namespace Towel.Mathematics
 		/// <param name="angle">The angle of rotation around the axis.</param>
 		/// <param name="axis">The 3D axis to rotate the matrix around.</param>
 		/// <returns>The rotated matrix.</returns>
-		public static Matrix<T> Rotate4x4(Matrix<T> matrix, Angle<T> angle, Vector<T> axis)
+		public static MatrixDense<T> Rotate4x4(MatrixDense<T> matrix, Angle<T> angle, Vector<T> axis, ref MatrixDense<T> b) =>
+			throw new NotImplementedException();
+
+		/// <summary>Rotates a 4x4 matrix around an 3D axis by a specified angle.</summary>
+		/// /// <param name="matrix">The 4x4 matrix to rotate.</param>
+		/// <param name="angle">The angle of rotation around the axis.</param>
+		/// <param name="axis">The 3D axis to rotate the matrix around.</param>
+		/// <returns>The rotated matrix.</returns>
+		public static MatrixDense<T> Rotate4x4(MatrixDense<T> matrix, Angle<T> angle, Vector<T> axis)
 		{
 			if (axis is null)
 			{
@@ -2152,7 +3565,7 @@ namespace Towel.Mathematics
 			// if the angle is zero, no rotation is required
 			if (Compute.Equal(angle._measurement, Constant<T>.Zero))
 			{
-				return matrix.Clone();
+				return (MatrixDense<T>)matrix.Clone();
 			}
 
 			T cosine = Compute.CosineSystem(angle);
@@ -2198,7 +3611,7 @@ namespace Towel.Mathematics
 			T _3_2 = Constant<T>.Zero;
 			T _3_3 = Constant<T>.One;
 
-			return new Matrix<T>(4, 4, (row, column) =>
+			return new MatrixDense<T>(4, 4, (row, column) =>
 			{
 				switch (row)
 				{
@@ -2244,7 +3657,17 @@ namespace Towel.Mathematics
 			});
 		}
 
-		public Matrix<T> Rotate4x4(Angle<T> angle, Vector<T> axis)
+		public override void Rotate4x4(Angle<T> angle, Vector<T> axis, ref Matrix<T> b)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Rotate4x4(Angle<T> angle, Vector<T> axis, ref MatrixDense<T> b)
+		{
+			throw new NotImplementedException();
+		}
+
+		public MatrixDense<T> Rotate4x4(Angle<T> angle, Vector<T> axis)
 		{
 			return Rotate4x4(this, angle, axis);
 		}
@@ -2257,7 +3680,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The first matrix to check for equality.</param>
 		/// <param name="b">The second matrix to check for equality.</param>
 		/// <returns>True if values are equal, false if not.</returns>
-		private static bool Equal(Matrix<T> a, Matrix<T> b)
+		private static bool Equal(MatrixDense<T> a, MatrixDense<T> b)
 		{
 			if (a is null)
 			{
@@ -2297,7 +3720,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The first matrix to check for equality.</param>
 		/// <param name="b">The second matrix to check for equality.</param>
 		/// <returns>True if values are equal, false if not.</returns>
-		public static bool operator ==(Matrix<T> a, Matrix<T> b)
+		public static bool operator ==(MatrixDense<T> a, MatrixDense<T> b)
 		{
 			return Equal(a, b);
 		}
@@ -2306,7 +3729,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The first matrix to check for non-equality.</param>
 		/// <param name="b">The second matrix to check for non-equality.</param>
 		/// <returns>True if values are not equal, false if not.</returns>
-		public static bool operator !=(Matrix<T> a, Matrix<T> b)
+		public static bool operator !=(MatrixDense<T> a, MatrixDense<T> b)
 		{
 			return !Equal(a, b);
 		}
@@ -2314,7 +3737,22 @@ namespace Towel.Mathematics
 		/// <summary>Does a value equality check.</summary>
 		/// <param name="b">The second matrix to check for equality.</param>
 		/// <returns>True if values are equal, false if not.</returns>
-		public bool Equal(Matrix<T> b)
+		public override bool Equal(Matrix<T> b)
+		{
+			if (b is MatrixDense<T> bDense)
+			{
+				return this == bDense;
+			}
+			else
+			{
+				return base.Equal(b);
+			}
+		}
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public bool Equal(MatrixDense<T> b)
 		{
 			return this == b;
 		}
@@ -2328,7 +3766,7 @@ namespace Towel.Mathematics
 		/// <param name="b">The second matrix to check for equality.</param>
 		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
 		/// <returns>True if values are equal, false if not.</returns>
-		private static bool Equal(Matrix<T> a, Matrix<T> b, T leniency)
+		private static bool Equal(MatrixDense<T> a, MatrixDense<T> b, T leniency)
 		{
 			if (a is null)
 			{
@@ -2368,7 +3806,7 @@ namespace Towel.Mathematics
 		/// <param name="b">The second matrix to check for equality.</param>
 		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
 		/// <returns>True if values are equal, false if not.</returns>
-		public bool Equal(Matrix<T> b, T leniency)
+		public bool Equal(MatrixDense<T> b, T leniency)
 		{
 			return Equal(this, b, leniency);
 		}
@@ -2381,12 +3819,12 @@ namespace Towel.Mathematics
 
 		#region Get/Set
 
-		internal T Get(int row, int column)
+		internal new T Get(int row, int column)
 		{
 			return _matrix[row * Columns + column];
 		}
 
-		internal void Set(int row, int column, T value)
+		internal new void Set(int row, int column, T value)
 		{
 			_matrix[row * Columns + column] = value;
 		}
@@ -2397,8 +3835,8 @@ namespace Towel.Mathematics
 
 		/// <summary>Fills a matrix with values using a delegate.</summary>
 		/// <param name="matrix">The matrix to fill the values of.</param>
-		/// <param name="function">The function to set the values at the relative indeces.</param>
-		public static void Format(Matrix<T> matrix, Func<int, int, T> function)
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public static void Format(MatrixDense<T> matrix, Func<int, int, T> func)
 		{
 			int Rows = matrix.Rows;
 			int Columns = matrix.Columns;
@@ -2408,24 +3846,32 @@ namespace Towel.Mathematics
 			{
 				for (int column = 0; column < Columns; column++)
 				{
-					MATRIX[i++] = function(row, column);
+					MATRIX[i++] = func(row, column);
 				}
 			}
 		}
 
 		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public override void Format(Func<int, int, T> func) =>
+			Format(this, func);
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
 		/// <param name="matrix">The matrix to fill the values of.</param>
 		/// <param name="func">The function to set the values at the relative indeces.</param>
-		public static void Format(Matrix<T> matrix, Func<int, T> func)
-		{
+		public static void Format(MatrixDense<T> matrix, Func<int, T> func) =>
 			matrix._matrix.Format(func);
-		}
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public override void Format(Func<int, T> func) =>
+			Format(this, func);
 
 		#endregion
 
 		#region CloneContents
 
-		internal static void CloneContents(Matrix<T> a, Matrix<T> b)
+		internal static void CloneContents(MatrixDense<T> a, MatrixDense<T> b)
 		{
 			T[] a_flat = a._matrix;
 			T[] b_flat = b._matrix;
@@ -2440,7 +3886,7 @@ namespace Towel.Mathematics
 
 		#region TransposeContents
 
-		internal static void TransposeContents(Matrix<T> a)
+		internal static void TransposeContents(MatrixDense<T> a)
 		{
 			int Rows = a.Rows;
 			for (int i = 0; i < Rows; i++)
@@ -2462,18 +3908,18 @@ namespace Towel.Mathematics
 		/// <summary>Creates a copy of a matrix.</summary>
 		/// <param name="a">The matrix to copy.</param>
 		/// <returns>The copy of this matrix.</returns>
-		public static Matrix<T> Clone(Matrix<T> a)
+		public static MatrixDense<T> Clone(MatrixDense<T> a)
 		{
 			if (a is null)
 			{
 				throw new ArgumentNullException(nameof(a));
 			}
-			return new Matrix<T>(a);
+			return new MatrixDense<T>(a);
 		}
 
 		/// <summary>Copies this matrix.</summary>
 		/// <returns>The copy of this matrix.</returns>
-		public Matrix<T> Clone()
+		public override Matrix<T> Clone()
 		{
 			return Clone(this);
 		}
@@ -2487,13 +3933,13 @@ namespace Towel.Mathematics
 		/// <summary>Converts a T[,] into a matrix.</summary>
 		/// <param name="array">The T[,] to convert to a matrix.</param>
 		/// <returns>The resulting matrix after conversion.</returns>
-		public static implicit operator Matrix<T>(T[,] array) =>
-			new Matrix<T>(array.GetLength(0), array.GetLength(1), (i, j) => array[i, j]);
+		public static implicit operator MatrixDense<T>(T[,] array) =>
+			new MatrixDense<T>(array.GetLength(0), array.GetLength(1), (i, j) => array[i, j]);
 
 		/// <summary>Converts a matrix into a T[,].</summary>
 		/// <param name="matrix">The matrix toconvert to a T[,].</param>
 		/// <returns>The resulting T[,] after conversion.</returns>
-		public static explicit operator T[,](Matrix<T> matrix)
+		public static explicit operator T[,](MatrixDense<T> matrix)
 		{
 			int rows = matrix._rows;
 			int columns = matrix._columns;
@@ -2516,21 +3962,21 @@ namespace Towel.Mathematics
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		public void Stepper(Step<T> step) => _matrix.Stepper(step);
+		public override void Stepper(Step<T> step) => _matrix.Stepper(step);
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		public void Stepper(StepRef<T> step) => _matrix.Stepper(step);
-
-		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
-		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		/// <returns>The resulting status of the iteration.</returns>
-		public StepStatus Stepper(StepBreak<T> step) => _matrix.Stepper(step);
+		public override void Stepper(StepRef<T> step) => _matrix.Stepper(step);
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
 		/// <returns>The resulting status of the iteration.</returns>
-		public StepStatus Stepper(StepRefBreak<T> step) => _matrix.Stepper(step);
+		public override StepStatus Stepper(StepBreak<T> step) => _matrix.Stepper(step);
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public override StepStatus Stepper(StepRefBreak<T> step) => _matrix.Stepper(step);
 
 		#endregion
 
@@ -2547,9 +3993,11 @@ namespace Towel.Mathematics
 		/// <summary>Does an equality check by value.</summary>
 		/// <param name="b">The object to compare to.</param>
 		/// <returns>True if the references are equal, false if not.</returns>
-		public override bool Equals(object b) => b is Matrix<T> B
+		public override bool Equals(object b) => b is MatrixDense<T> B
 			? Equal(this, B)
 			: false;
+
+		#endregion
 
 		#endregion
 	}

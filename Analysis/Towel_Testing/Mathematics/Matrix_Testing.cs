@@ -250,8 +250,8 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> A = new Matrix<decimal>(2, 2);
-				Matrix<decimal> B = new Matrix<decimal>(3, 3);
+				Matrix<decimal> A = new MatrixDense<decimal>(2, 2);
+				Matrix<decimal> B = new MatrixDense<decimal>(3, 3);
 				Assert.ThrowsException<MathematicsException>(() => A + B);
 			}
 		}
@@ -352,8 +352,8 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> A = new Matrix<decimal>(2, 2);
-				Matrix<decimal> B = new Matrix<decimal>(3, 3);
+				Matrix<decimal> A = new MatrixDense<decimal>(2, 2);
+				Matrix<decimal> B = new MatrixDense<decimal>(3, 3);
 				Assert.ThrowsException<MathematicsException>(() => A - B);
 			}
 		}
@@ -446,8 +446,8 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> A = new Matrix<decimal>(2, 2);
-				Matrix<decimal> B = new Matrix<decimal>(3, 3);
+				Matrix<decimal> A = new MatrixDense<decimal>(2, 2);
+				Matrix<decimal> B = new MatrixDense<decimal>(3, 3);
 				Assert.ThrowsException<MathematicsException>(() => A * B);
 			}
 		}
@@ -456,11 +456,11 @@ namespace Towel_Testing.Mathematics
 		{
 			// int
 			{
-				Matrix<int> A = new Matrix<int>(3, 3)
+				Matrix<int> A = new int[,]
 				{
-					[0] =  2, [1] = 3, [2] = -4,
-					[3] = 11, [4] = 8, [5] =  7,
-					[6] =  2, [7] = 5, [8] =  3,
+					{  2, 3, -4, },
+					{ 11, 8,  7, },
+					{  2, 5,  3, },
 				};
 				Vector<int> B = new Vector<int>(3, 7, 5);
 				Vector<int> C = new Vector<int>(7, 124, 56);
@@ -509,7 +509,7 @@ namespace Towel_Testing.Mathematics
 			// Exceptions
 			{
 				Vector<int> V = new Vector<int>(1);
-				Matrix<int> M = new Matrix<int>(2, 2);
+				Matrix<int> M = new MatrixDense<int>(2, 2);
 				Assert.ThrowsException<MathematicsException>(() => M * V);
 			}
 		}
@@ -720,7 +720,7 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> A = new Matrix<decimal>(2, 3);
+				Matrix<decimal> A = new MatrixDense<decimal>(2, 3);
 				Assert.ThrowsException<MathematicsException>(() => A ^ 3);
 			}
 		}
@@ -805,7 +805,7 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> a = new Matrix<decimal>(2, 3);
+				Matrix<decimal> a = new MatrixDense<decimal>(2, 3);
 				Assert.ThrowsException<MathematicsException>(() => a.Determinent());
 			}
 		}
@@ -858,7 +858,7 @@ namespace Towel_Testing.Mathematics
 
 			// Exceptions
 			{
-				Matrix<decimal> a = new Matrix<decimal>(2, 3);
+				Matrix<decimal> a = new MatrixDense<decimal>(2, 3);
 				Assert.ThrowsException<MathematicsException>(() => a.Trace());
 			}
 		}

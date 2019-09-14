@@ -1340,7 +1340,7 @@ namespace Towel.Mathematics
 		/// <returns>The resulting matrix.</returns>
 		public static explicit operator Matrix<T>(Vector<T> vector)
 		{
-			return new Matrix<T>(vector);
+			return new MatrixDense<T>(vector);
 		}
 
 		/// <summary>Implicitly converts a scalar into a one dimensional vector.</summary>

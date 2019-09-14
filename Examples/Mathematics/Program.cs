@@ -260,7 +260,7 @@ namespace Mathematics
 			ConsoleWrite(Vector<double>.CrossProduct(V3, V3));
 
 			// Matrix Construction
-			Matrix<double> M = new Matrix<double>(4, 4, (row, column) => random.NextDouble());
+			Matrix<double> M = new MatrixDense<double>(4, 4, (row, column) => random.NextDouble());
 
 			Console.WriteLine("    Matrix<double>.Identity(4, 4): ");
 			ConsoleWrite(Matrix<double>.FactoryIdentity(4, 4));
