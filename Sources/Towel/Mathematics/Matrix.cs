@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using Towel.DataStructures;
 using Towel.Measurements;
 
 namespace Towel.Mathematics
@@ -1261,17 +1262,8 @@ namespace Towel.Mathematics
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		public abstract void Stepper(StepRef<T> step);
-
-		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
-		/// <param name="step">The delegate to invoke on each item in the structure.</param>
 		/// <returns>The resulting status of the iteration.</returns>
 		public abstract StepStatus Stepper(StepBreak<T> step);
-
-		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
-		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		/// <returns>The resulting status of the iteration.</returns>
-		public abstract StepStatus Stepper(StepRefBreak<T> step);
 
 		#endregion
 
@@ -3966,7 +3958,7 @@ namespace Towel.Mathematics
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		public override void Stepper(StepRef<T> step) => _matrix.Stepper(step);
+		public void Stepper(StepRef<T> step) => _matrix.Stepper(step);
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
@@ -3976,7 +3968,7 @@ namespace Towel.Mathematics
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
 		/// <returns>The resulting status of the iteration.</returns>
-		public override StepStatus Stepper(StepRefBreak<T> step) => _matrix.Stepper(step);
+		public StepStatus Stepper(StepRefBreak<T> step) => _matrix.Stepper(step);
 
 		#endregion
 
@@ -3994,6 +3986,2670 @@ namespace Towel.Mathematics
 		/// <param name="b">The object to compare to.</param>
 		/// <returns>True if the references are equal, false if not.</returns>
 		public override bool Equals(object b) => b is MatrixDense<T> B
+			? Equal(this, B)
+			: false;
+
+		#endregion
+
+		#endregion
+	}
+
+	/// <summary>A matrix of arbitrary dimensions implemented as a flattened array.</summary>
+	/// <typeparam name="T">The numeric type of this Matrix.</typeparam>
+	[DebuggerDisplay("{" + nameof(DebuggerString) + "}")]
+	[Serializable]
+	public class MatrixSparse<T> : Matrix<T>
+	{
+		internal readonly IMap<T, int> _map;
+		internal int _rows;
+		internal int _columns;
+		internal T _uniform;
+
+		#region Members
+
+		#region Properties
+
+		internal int Length => _rows * _columns;
+		/// <summary>The number of rows in the matrix.</summary>
+		public override int Rows => _rows;
+		/// <summary>The number of columns in the matrix.</summary>
+		public override int Columns => _columns;
+		/// <summary>Determines if the matrix is square.</summary>
+		public override bool IsSquare => _rows == _columns;
+		/// <summary>Determines if the matrix is a vector.</summary>
+		public override bool IsVector => _columns == 1;
+		/// <summary>Determines if the matrix is a 2 component vector.</summary>
+		public override bool Is2x1 => _rows == 2 && _columns == 1;
+		/// <summary>Determines if the matrix is a 3 component vector.</summary>
+		public override bool Is3x1 => _rows == 3 && _columns == 1;
+		/// <summary>Determines if the matrix is a 4 component vector.</summary>
+		public override bool Is4x1 => _rows == 4 && _columns == 1;
+		/// <summary>Determines if the matrix is a 2 square matrix.</summary>
+		public override bool Is2x2 => _rows == 2 && _columns == 2;
+		/// <summary>Determines if the matrix is a 3 square matrix.</summary>
+		public override bool Is3x3 => _rows == 3 && _columns == 3;
+		/// <summary>Determines if the matrix is a 4 square matrix.</summary>
+		public override bool Is4x4 => _rows == 4 && _columns == 4;
+
+		/// <summary>Standard row-major matrix indexing.</summary>
+		/// <param name="row">The row index.</param>
+		/// <param name="column">The column index.</param>
+		/// <returns>The value at the given indeces.</returns>
+		public override T this[int row, int column]
+		{
+			get
+			{
+				if (row < 0 || row > Rows)
+				{
+					throw new ArgumentOutOfRangeException(nameof(row), row, "!(" + nameof(row) + " >= 0) || !(" + nameof(row) + " < " + nameof(Rows) + ")");
+				}
+				if (column < 0 || column > Columns)
+				{
+					throw new ArgumentOutOfRangeException(nameof(column), row, "!(" + nameof(column) + " >= 0) || !(" + nameof(column) + " < " + nameof(Columns) + ")");
+				}
+				return Get(row, column);
+			}
+			set
+			{
+				if (row < 0 || row > Rows)
+				{
+					throw new ArgumentOutOfRangeException(nameof(row), row, "!(" + nameof(row) + " >= 0) || !(" + nameof(row) + " < " + nameof(Rows) + ")");
+				}
+				if (column < 0 || column > Columns)
+				{
+					throw new ArgumentOutOfRangeException(nameof(column), row, "!(" + nameof(column) + " >= 0) || !(" + nameof(column) + " < " + nameof(Columns) + ")");
+				}
+				Set(row, column, value);
+			}
+		}
+
+		/// <summary>Indexing of the flattened array representing the matrix.</summary>
+		/// <param name="flatIndex">The flattened index of the matrix.</param>
+		/// <returns>The value at the given flattened index.</returns>
+		public override T this[int flatIndex]
+		{
+			get
+			{
+				if (flatIndex < 0 || Length < flatIndex)
+				{
+					throw new ArgumentOutOfRangeException(nameof(flatIndex), flatIndex, "!(" + nameof(flatIndex) + " >= 0) || !(" + nameof(flatIndex) + " < " + nameof(Rows) + " * " + nameof(Columns) + ")");
+				}
+				return _map[flatIndex];
+			}
+			set
+			{
+				if (flatIndex < 0 || Length < flatIndex)
+				{
+					throw new ArgumentOutOfRangeException(nameof(flatIndex), flatIndex, "!(" + nameof(flatIndex) + " >= 0) || !(" + nameof(flatIndex) + " < " + nameof(Rows) + " * " + nameof(Columns) + ")");
+				}
+				_map[flatIndex] = value;
+			}
+		}
+
+		#endregion
+
+		#region Debugger Properties
+
+		internal override string DebuggerString
+		{
+			get
+			{
+				int ROWS = this.Rows;
+				int COLUMNS = this.Columns;
+				if (ROWS < 5 && COLUMNS < 5)
+				{
+					StringBuilder stringBuilder = new StringBuilder();
+					stringBuilder.Append("[");
+					for (int i = 0; i < ROWS; i++)
+					{
+						stringBuilder.Append("[");
+						for (int j = 0; j < COLUMNS; j++)
+						{
+							stringBuilder.Append(Get(i, j));
+							if (j < COLUMNS - 1)
+							{
+								stringBuilder.Append(",");
+							}
+						}
+						stringBuilder.Append("]");
+					}
+					stringBuilder.Append("]");
+					return stringBuilder.ToString();
+				}
+				return ToString();
+			}
+		}
+
+		#endregion
+
+		#region Constructors
+
+		/// <summary>Constructs a new default matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of row dimensions.</param>
+		/// <param name="columns">The number of column dimensions.</param>
+		/// <param name="uniform">The default value if one has not been assigned.</param>
+		public MatrixSparse(int rows, int columns, T uniform)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException("rows", rows, "!(rows > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException("columns", columns, "!(columns > 0)");
+			}
+			if (rows > 46340)
+			{
+				throw new ArgumentOutOfRangeException("rows", rows, "!(rows <= 46340)");
+			}
+			if (columns > 46340)
+			{
+				throw new ArgumentOutOfRangeException("columns", rows, "!(columns <= 46340)");
+			}
+			_map = new MapHashLinked<T, int>();
+			_rows = rows;
+			_columns = columns;
+			_uniform = uniform;
+		}
+
+		/// <summary>Constructs a new default matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of row dimensions.</param>
+		/// <param name="columns">The number of column dimensions.</param>
+		public MatrixSparse(int rows, int columns) : this(rows, columns, default) { }
+
+		private MatrixSparse(MatrixSparse<T> matrix)
+		{
+			_rows = matrix._rows;
+			_columns = matrix.Columns;
+			//#error Not Implmeneted
+		}
+
+		internal MatrixSparse(Vector<T> vector)
+		{
+			//#error Not Implmeneted
+		}
+
+		#endregion
+
+		#region Factories
+
+		/// <summary>Constructs a new zero-matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <returns>The newly constructed zero-matrix.</returns>
+		public new static MatrixSparse<T> FactoryZero(int rows, int columns)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (rows > 46340)
+			{
+				throw new ArgumentOutOfRangeException("rows", rows, "!(rows <= 46340)");
+			}
+			if (columns > 46340)
+			{
+				throw new ArgumentOutOfRangeException("columns", rows, "!(columns <= 46340)");
+			}
+			return new MatrixSparse<T>(rows, columns, Constant<T>.Zero);
+		}
+
+		/// <summary>Constructs a new identity-matrix of the given dimensions.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <returns>The newly constructed identity-matrix.</returns>
+		public new static MatrixSparse<T> FactoryIdentity(int rows, int columns)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (rows > 46340)
+			{
+				throw new ArgumentOutOfRangeException("rows", rows, "!(rows <= 46340)");
+			}
+			if (columns > 46340)
+			{
+				throw new ArgumentOutOfRangeException("columns", rows, "!(columns <= 46340)");
+			}
+			MatrixSparse<T> matrix = new MatrixSparse<T>(rows, columns, Constant<T>.Zero);
+			int minimum = Compute.Minimum(rows, columns);
+			for (int i = 0; i < minimum; i++)
+			{
+				matrix._map[i * columns + i] = Constant<T>.One;
+			}
+			return matrix;
+		}
+
+		/// <summary>Constructs a new matrix where every entry is the same uniform value.</summary>
+		/// <param name="rows">The number of rows of the matrix.</param>
+		/// <param name="columns">The number of columns of the matrix.</param>
+		/// <param name="value">The value to assign every spot in the matrix.</param>
+		/// <returns>The newly constructed matrix filled with the uniform value.</returns>
+		public new static MatrixSparse<T> FactoryUniform(int rows, int columns, T value)
+		{
+			if (rows < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rows), rows, "!(" + nameof(rows) + " > 0)");
+			}
+			if (columns < 1)
+			{
+				throw new ArgumentOutOfRangeException(nameof(columns), columns, "!(" + nameof(columns) + " > 0)");
+			}
+			if (rows > 46340)
+			{
+				throw new ArgumentOutOfRangeException("rows", rows, "!(rows <= 46340)");
+			}
+			if (columns > 46340)
+			{
+				throw new ArgumentOutOfRangeException("columns", rows, "!(columns <= 46340)");
+			}
+			return new MatrixSparse<T>(rows, columns, value);
+		}
+
+		#endregion
+
+		#region Mathematics
+
+		#region RowMultiplication
+
+		private static void RowMultiplication(MatrixSparse<T> matrix, int row, T scalar)
+		{
+			int columns = matrix.Columns;
+			for (int i = 0; i < columns; i++)
+			{
+				matrix.Set(row, i, Compute.Multiply(matrix.Get(row, i), scalar));
+			}
+		}
+
+		#endregion
+
+		#region RowAddition
+
+		private static void RowAddition(MatrixSparse<T> matrix, int target, int second, T scalar)
+		{
+			int columns = matrix.Columns;
+			for (int i = 0; i < columns; i++)
+			{
+				matrix.Set(target, i, Compute.Add(matrix.Get(target, i), Compute.Multiply(matrix.Get(second, i), scalar)));
+			}
+		}
+
+		#endregion
+
+		#region SwapRows
+
+		private static void SwapRows(MatrixSparse<T> matrix, int row1, int row2)
+		{
+			int columns = matrix.Columns;
+			for (int i = 0; i < columns; i++)
+			{
+				T temp = matrix.Get(row1, i);
+				matrix.Set(row1, i, matrix.Get(row2, i));
+				matrix.Set(row2, i, temp);
+			}
+		}
+
+		#endregion
+
+		#region GetCofactor
+
+		private static void GetCofactor(MatrixSparse<T> a, MatrixSparse<T> temp, int p, int q, int n)
+		{
+			int i = 0, j = 0;
+			for (int row = 0; row < n; row++)
+			{
+				for (int col = 0; col < n; col++)
+				{
+					if (row != p && col != q)
+					{
+						temp.Set(i, j++, a.Get(row, col));
+						if (j == n - 1)
+						{
+							j = 0;
+							i++;
+						}
+					}
+				}
+			}
+		}
+
+		#endregion
+
+		#region GetDeterminant
+
+		private static T GetDeterminant(MatrixSparse<T> a, int n)
+		{
+			T determinent = Constant<T>.Zero;
+			if (n == 1)
+			{
+				return a.Get(0, 0);
+			}
+			MatrixSparse<T> temp = new MatrixSparse<T>(n, n);
+			T sign = Constant<T>.One;
+			for (int f = 0; f < n; f++)
+			{
+				GetCofactor(a, temp, 0, f, n);
+				determinent =
+					Compute.Add(determinent,
+						Compute.Multiply(sign,
+							Compute.Multiply(a.Get(0, f),
+								GetDeterminant(temp, n - 1))));
+				sign = Compute.Negate(sign);
+			}
+			return determinent;
+		}
+
+		#endregion
+
+		#region IsSymetric
+
+		/// <summary>Determines if the matrix is symetric.</summary>
+		/// <param name="a">The matrix to determine if symetric.</param>
+		/// <returns>True if the matrix is symetric; false if not.</returns>
+		public static bool GetIsSymetric(MatrixSparse<T> a)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			int rows = a._rows;
+			if (rows != a._columns)
+			{
+				return false;
+			}
+			for (int row = 0; row < rows; row++)
+			{
+				for (int column = row + 1; column < rows; column++)
+				{
+					if (Compute.NotEqual(a[row * rows + column], a[column * rows + row]))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		/// <summary>Determines if the matrix is symetric.</summary>
+		/// <returns>True if the matrix is symetric; false if not.</returns>
+		public override bool IsSymetric => GetIsSymetric(this);
+
+		#endregion
+
+		#region Negate
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		private static void Negate(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				b = new MatrixSparse<T>(a._rows, a._columns, a._uniform);
+			}
+			else
+			{
+				b._rows = a._rows;
+				b._columns = a._columns;
+				b._uniform = a._uniform;
+				b._map.Clear();
+			}
+			IMap<T, int> b_map = b._map;
+			a._map.Pairs((value, key) => b_map.Add(key, value));
+		}
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public static MatrixSparse<T> Negate(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			Negate(a, ref b);
+			return b;
+		}
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="a">The matrix to have its values negated.</param>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public static MatrixSparse<T> operator -(MatrixSparse<T> a) =>
+			Negate(a);
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		public override void Negate(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			Negate(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Negates all the values in a matrix.</summary>
+		/// <param name="b">The resulting matrix after the negation.</param>
+		public void Negate(ref MatrixSparse<T> b) =>
+			Negate(this, ref b);
+
+		/// <summary>Negates all the values in this matrix.</summary>
+		/// <returns>The resulting matrix after the negation.</returns>
+		public new MatrixSparse<T> Negate() =>
+			-this;
+
+		#endregion
+
+		#region Add
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <param name="c">The resulting matrix after the addition.</param>
+		private static void Add(MatrixSparse<T> a, MatrixSparse<T> b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			if (a._rows != b._rows || a._columns != b._columns)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(a) + "." + nameof(a.Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + " && " +
+					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
+			}
+			ISet<int> set = new SetHashLinked<int>();
+			for ()
+
+			int Length = a._map.Length;
+			T[] A = a._map;
+			T[] B = b._map;
+			T[] C;
+			if (c != null && c._map.Length == Length)
+			{
+				C = c._map;
+				c._rows = a._rows;
+				c._columns = a._columns;
+			}
+			else
+			{
+				c = new MatrixSparse<T>(a._rows, a._columns, Length);
+				C = c._map;
+			}
+			for (int i = 0; i < Length; i++)
+			{
+				C[i] = Compute.Add(A[i], B[i]);
+			}
+		}
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <returns>The resulting matrix after the addition.</returns>
+		public static MatrixSparse<T> Add(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			MatrixSparse<T> c = null;
+			Add(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard matrix addition.</summary>
+		/// <param name="a">The left matrix of the addition.</param>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <returns>The resulting matrix after teh addition.</returns>
+		public static MatrixSparse<T> operator +(MatrixSparse<T> a, MatrixSparse<T> b) =>
+			Add(a, b);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public override void Add(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (!(b is MatrixSparse<T> bDense))
+			{
+				base.Subtract(b, ref c);
+			}
+			else
+			{
+				MatrixSparse<T> d = c is MatrixSparse<T> cDense ? cDense : null;
+				Add(bDense, ref d);
+				c = d;
+			}
+		}
+
+		/// <summary>Does standard addition of two matrices.</summary>
+		/// <param name="b">The right matrix of the addition.</param>
+		/// <param name="c">The resulting matrix after the addition.</param>
+		public void Add(MatrixSparse<T> b, ref MatrixSparse<T> c) =>
+			Add(this, b, ref c);
+
+		/// <summary>Does a standard matrix addition.</summary>
+		/// <param name="b">The matrix to add to this matrix.</param>
+		/// <returns>The resulting matrix after the addition.</returns>
+		public MatrixSparse<T> Add(MatrixSparse<T> b) =>
+			this + b;
+
+		#endregion
+
+		#region Subtract
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		private static void Subtract(MatrixSparse<T> a, MatrixSparse<T> b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			if (a._rows != b._rows || a._columns != b._columns)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(a) + "." + nameof(a.Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + " && " +
+					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
+			}
+			T[] A = a._map;
+			T[] B = b._map;
+			int Length = A.Length;
+			T[] C;
+			if (c != null && c._map.Length == Length)
+			{
+				C = c._map;
+				c._rows = a._rows;
+				c._columns = a._columns;
+			}
+			else
+			{
+				c = new MatrixSparse<T>(a._rows, a._columns, Length);
+				C = c._map;
+			}
+			for (int i = 0; i < Length; i++)
+			{
+				C[i] = Compute.Subtract(A[i], B[i]);
+			}
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public static MatrixSparse<T> Subtract(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			MatrixSparse<T> c = null;
+			Subtract(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="a">The left matrix of the subtraction.</param>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public static MatrixSparse<T> operator -(MatrixSparse<T> a, MatrixSparse<T> b) =>
+			Subtract(a, b);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public override void Subtract(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (!(b is MatrixSparse<T> bDense))
+			{
+				base.Subtract(b, ref c);
+			}
+			else
+			{
+				MatrixSparse<T> d = c is MatrixSparse<T> cDense ? cDense : null;
+				Subtract(bDense, ref d);
+				c = d;
+			}
+		}
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <param name="c">The resulting matrix after the subtraction.</param>
+		public void Subtract(MatrixSparse<T> b, ref MatrixSparse<T> c) =>
+			Subtract(this, b, ref c);
+
+		/// <summary>Does a standard matrix subtraction.</summary>
+		/// <param name="b">The right matrix of the subtraction.</param>
+		/// <returns>The resulting matrix after the subtraction.</returns>
+		public MatrixSparse<T> Subtract(MatrixSparse<T> b) =>
+			this - b;
+
+		#endregion
+
+		#region Multiply (Matrix * Matrix)
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public static void Multiply(MatrixSparse<T> a, MatrixSparse<T> b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			if (a._columns != b._rows)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
+			}
+			if (object.ReferenceEquals(a, b) && object.ReferenceEquals(a, c))
+			{
+				MatrixSparse<T> clone = (MatrixSparse<T>)a.Clone();
+				a = clone;
+				b = clone;
+			}
+			else if (object.ReferenceEquals(a, c))
+			{
+				a = (MatrixSparse<T>)a.Clone();
+			}
+			else if (object.ReferenceEquals(b, c))
+			{
+				b = (MatrixSparse<T>)b.Clone();
+			}
+			int c_Rows = a._rows;
+			int a_Columns = a._columns;
+			int c_Columns = b._columns;
+			T[] A = a._map;
+			T[] B = b._map;
+			T[] C;
+			if (c != null && c._map.Length == c_Rows * c_Columns)
+			{
+				C = c._map;
+				c._rows = c_Rows;
+				c._columns = c_Columns;
+			}
+			else
+			{
+				c = new MatrixSparse<T>(c_Rows, c_Columns);
+				C = c._map;
+			}
+			for (int i = 0; i < c_Rows; i++)
+			{
+				int i_times_a_Columns = i * a_Columns;
+				int i_times_c_Columns = i * c_Columns;
+				for (int j = 0; j < c_Columns; j++)
+				{
+					T sum = Constant<T>.Zero;
+					for (int k = 0; k < a_Columns; k++)
+					{
+						sum = Compute.MultiplyAddImplementation<T>.Function(A[i_times_a_Columns + k], B[k * c_Columns + j], sum);
+					}
+					C[i_times_c_Columns + j] = sum;
+				}
+			}
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public static MatrixSparse<T> Multiply(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			MatrixSparse<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public static MatrixSparse<T> operator *(MatrixSparse<T> a, MatrixSparse<T> b) =>
+			Multiply(a, b);
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public override void Multiply(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (!(b is MatrixSparse<T> bDense))
+			{
+				base.Multiply(b, ref c);
+			}
+			else
+			{
+				MatrixSparse<T> d = c is MatrixSparse<T> cDense ? cDense : null;
+				Multiply(bDense, ref d);
+				c = d;
+			}
+		}
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <param name="c">The resulting matrix of the multiplication.</param>
+		public void Multiply(MatrixSparse<T> b, ref MatrixSparse<T> c) =>
+			Multiply(this, b, ref c);
+
+		/// <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+		/// <param name="b">The right matrix of the multiplication.</param>
+		/// <returns>The resulting matrix of the multiplication.</returns>
+		public MatrixSparse<T> Multiply(MatrixSparse<T> b) =>
+			this * b;
+
+		#endregion
+
+		#region Multiply (Matrix * Vector)
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <param name="c">The resulting vector of the multiplication.</param>
+		private static void Multiply(MatrixSparse<T> a, Vector<T> b, ref Vector<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(b));
+			}
+			int rows = a._rows;
+			int columns = a._columns;
+			if (columns != b.Dimensions)
+			{
+				throw new MathematicsException("Arguments invalid !(" +
+					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Dimensions) + ")");
+			}
+			T[] A = a._map;
+			T[] B = b._vector;
+			T[] C;
+			if (c != null && c.Dimensions == columns)
+			{
+				C = c._vector;
+			}
+			else
+			{
+				c = new Vector<T>(columns);
+				C = c._vector;
+			}
+			for (int i = 0; i < rows; i++)
+			{
+				int i_times_columns = i * columns;
+				T sum = Constant<T>.Zero;
+				for (int j = 0; j < columns; j++)
+				{
+					sum = Compute.Add(sum, Compute.Multiply(A[i_times_columns + j], B[j]));
+				}
+				C[i] = sum;
+			}
+		}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public static Vector<T> Multiply(MatrixSparse<T> a, Vector<T> b)
+		{
+			Vector<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="a">The left matrix of the multiplication.</param>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public static Vector<T> operator *(MatrixSparse<T> a, Vector<T> b) =>
+			Multiply(a, b);
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <param name="c">The resulting vector of the multiplication.</param>
+		public override void Multiply(Vector<T> b, ref Vector<T> c) =>
+			Multiply(this, b, ref c);
+
+		/// <summary>Does a matrix-vector multiplication.</summary>
+		/// <param name="b">The right vector of the multiplication.</param>
+		/// <returns>The resulting vector of the multiplication.</returns>
+		public new Vector<T> Multiply(Vector<T> b) =>
+			this * b;
+
+		#endregion
+
+		#region Multiply (Matrix * Scalar)
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		private static void Multiply(MatrixSparse<T> a, T b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			T[] A = a._map;
+			int Length = A.Length;
+			T[] C;
+			if (c != null && c._map.Length == Length)
+			{
+				C = c._map;
+				c._rows = a._rows;
+				c._columns = a._columns;
+			}
+			else
+			{
+				c = new MatrixSparse<T>(a._rows, a._columns, Length);
+				C = c._map;
+			}
+			for (int i = 0; i < Length; i++)
+			{
+				C[i] = Compute.Multiply(A[i], b);
+			}
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static MatrixSparse<T> Multiply(MatrixSparse<T> a, T b)
+		{
+			MatrixSparse<T> c = null;
+			Multiply(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static MatrixSparse<T> Multiply(T b, MatrixSparse<T> a)
+		{
+			return Multiply(a, b);
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static MatrixSparse<T> operator *(MatrixSparse<T> a, T b)
+		{
+			return Multiply(a, b);
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="a">The matrix to have the values multiplied.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public static MatrixSparse<T> operator *(T b, MatrixSparse<T> a)
+		{
+			return Multiply(b, a);
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		public override void Multiply(T b, ref Matrix<T> c)
+		{
+			MatrixSparse<T> d = c is MatrixSparse<T> cDense ? cDense : null;
+			Multiply(this, b, ref d);
+			c = d;
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <param name="c">The resulting matrix after the multiplications.</param>
+		public void Multiply(T b, ref MatrixSparse<T> c)
+		{
+			Multiply(this, b, ref c);
+		}
+
+		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
+		/// <param name="b">The scalar to multiply the values by.</param>
+		/// <returns>The resulting matrix after the multiplications.</returns>
+		public MatrixSparse<T> Multiply(T b)
+		{
+			return this * b;
+		}
+
+		#endregion
+
+		#region Divide (Matrix / Scalar)
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		private static void Divide(MatrixSparse<T> a, T b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			T[] A = a._map;
+			int Length = A.Length;
+			T[] C;
+			if (c != null && c._map.Length == Length)
+			{
+				C = c._map;
+				c._rows = a._rows;
+				c._columns = a._columns;
+			}
+			else
+			{
+				c = new MatrixSparse<T>(a._rows, a._columns, Length);
+				C = c._map;
+			}
+			for (int i = 0; i < Length; i++)
+			{
+				C[i] = Compute.Divide(A[i], b);
+			}
+		}
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public static MatrixSparse<T> Divide(MatrixSparse<T> a, T b)
+		{
+			MatrixSparse<T> c = null;
+			Divide(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="a">The matrix to divide the values of.</param>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public static MatrixSparse<T> operator /(MatrixSparse<T> a, T b) => Divide(a, b);
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		public override void Divide(T b, ref Matrix<T> c)
+		{
+			MatrixSparse<T> d = null;
+			if (c is MatrixSparse<T> cDense)
+			{
+				d = cDense;
+			}
+			Divide(this, b, ref d);
+			c = d;
+		}
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <param name="c">The resulting matrix after the division.</param>
+		public void Divide(T b, ref MatrixSparse<T> c) => Divide(this, b, ref c);
+
+		/// <summary>Divides all the values in the matrix by a scalar.</summary>
+		/// <param name="b">The scalar to divide all the matrix values by.</param>
+		/// <returns>The resulting matrix after the division.</returns>
+		public new MatrixSparse<T> Divide(T b) => this / b;
+
+		#endregion
+
+		#region Power (Matrix ^ Scalar)
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		private static void Power(MatrixSparse<T> a, int b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (!a.IsSquare)
+			{
+				throw new MathematicsException("Invalid power (!" + nameof(a) + ".IsSquare)");
+			}
+			if (b < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(b), b, "!(" + nameof(b) + " >= 0)");
+			}
+			if (b == 0)
+			{
+				if (c != null && c._map.Length == a._map.Length)
+				{
+					c._rows = a._rows;
+					c._columns = a._columns;
+					Format(c, (x, y) => x == y ? Constant<T>.One : Constant<T>.Zero);
+				}
+				else
+				{
+					c = MatrixSparse<T>.FactoryIdentity(a._rows, a._columns);
+				}
+				return;
+			}
+			if (c != null && c._map.Length == a._map.Length)
+			{
+				c._rows = a._rows;
+				c._columns = a._columns;
+				T[] A = a._map;
+				T[] C = c._map;
+				for (int i = 0; i < a._map.Length; i++)
+				{
+					C[i] = A[i];
+				}
+			}
+			else
+			{
+				c = (MatrixSparse<T>)a.Clone();
+			}
+			MatrixSparse<T> d = new MatrixSparse<T>(a._rows, a._columns, a._map.Length);
+			for (int i = 0; i < b; i++)
+			{
+				Multiply(c, a, ref d);
+				MatrixSparse<T> temp = d;
+				d = c;
+				c = d;
+			}
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public static MatrixSparse<T> Power(MatrixSparse<T> a, int b)
+		{
+			MatrixSparse<T> c = null;
+			Power(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="a">The matrix to be powered by.</param>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public static MatrixSparse<T> operator ^(MatrixSparse<T> a, int b)
+		{
+			return Power(a, b);
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		public override void Power(int b, ref Matrix<T> c)
+		{
+			MatrixSparse<T> d = null;
+			if (c is MatrixSparse<T> cDense)
+			{
+				d = cDense;
+			}
+			Power(this, b, ref d);
+			c = d;
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <param name="c">The resulting matrix of the power operation.</param>
+		public void Power(int b, ref MatrixSparse<T> c)
+		{
+			Power(this, b, ref c);
+		}
+
+		/// <summary>Applies a power to a square matrix.</summary>
+		/// <param name="b">The power to apply to the matrix.</param>
+		/// <returns>The resulting matrix of the power operation.</returns>
+		public new MatrixSparse<T> Power(int b)
+		{
+			return this ^ b;
+		}
+
+		#endregion
+
+		#region Determinent
+
+		/// <summary>Computes the determinent of a square matrix.</summary>
+		/// <param name="a">The matrix to compute the determinent of.</param>
+		/// <returns>The computed determinent.</returns>
+		public static T Determinent(MatrixSparse<T> a)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (!a.IsSquare)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			}
+			return GetDeterminant(a, a.Rows);
+
+			#region Old Version
+
+			//if (a is null)
+			//{
+			//    throw new ArgumentNullException(nameof(a));
+			//}
+			//if (!a.IsSquare)
+			//{
+			//    throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			//}
+			//T determinant = Constant<T>.One;
+			//Matrix<T> rref = a.Clone();
+			//int a_rows = a._rows;
+			//for (int i = 0; i < a_rows; i++)
+			//{
+			//    if (Compute.Equal(rref[i, i], Constant<T>.Zero))
+			//    {
+			//        for (int j = i + 1; j < rref.Rows; j++)
+			//        {
+			//            if (Compute.NotEqual(rref.Get(j, i), Constant<T>.Zero))
+			//            {
+			//                SwapRows(rref, i, j);
+			//                determinant = Compute.Multiply(determinant, Constant<T>.NegativeOne);
+			//            }
+			//        }
+			//    }
+			//    determinant = Compute.Multiply(determinant, rref.Get(i, i));
+			//    T temp_rowMultiplication = Compute.Divide(Constant<T>.One, rref.Get(i, i));
+			//    RowMultiplication(rref, i, temp_rowMultiplication);
+			//    for (int j = i + 1; j < rref.Rows; j++)
+			//    {
+			//        T scalar = Compute.Negate(rref.Get(j, i));
+			//        RowAddition(rref, j, i, scalar);
+
+			//    }
+			//    for (int j = i - 1; j >= 0; j--)
+			//    {
+			//        T scalar = Compute.Negate(rref.Get(j, i));
+			//        RowAddition(rref, j, i, scalar);
+
+			//    }
+			//}
+			//return determinant;
+
+			#endregion
+		}
+
+		/// <summary>Computes the determinent of a square matrix.</summary>
+		/// <returns>The computed determinent.</returns>
+		public override T Determinent() =>
+			Determinent(this);
+
+		#endregion
+
+		#region Trace
+
+		/// <summary>Computes the trace of a square matrix.</summary>
+		/// <param name="a">The matrix to compute the trace of.</param>
+		/// <returns>The computed trace.</returns>
+		public static T Trace(MatrixSparse<T> a)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (!a.IsSquare)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			}
+			T trace = Compute.Add((Step<T> step) =>
+			{
+				T[] A = a._map;
+				int rows = a.Rows;
+				for (int i = 0; i < rows; i++)
+				{
+					step(A[i * rows + i]);
+				}
+			});
+			return trace;
+		}
+
+		/// <summary>Computes the trace of a square matrix.</summary>
+		/// <returns>The computed trace.</returns>
+		public override T Trace() =>
+			Trace(this);
+
+		#endregion
+
+		#region Minor
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="a">The matrix to get the minor of.</param>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		private static void Minor(MatrixSparse<T> a, int row, int column, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (a._rows < 2 || a._columns < 2)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.Rows) + " >= 2 && " + nameof(a) + "." + nameof(a.Columns) + " >= 2)");
+			}
+			if (row < 0 || row >= a._rows)
+			{
+				throw new ArgumentOutOfRangeException(nameof(row), row, "!(" + nameof(row) + " > 0)");
+			}
+			if (column < 0 || column >= a._columns)
+			{
+				throw new ArgumentOutOfRangeException(nameof(column), column, "!(" + nameof(column) + " > 0)");
+			}
+			if (object.ReferenceEquals(a, b))
+			{
+				a = (MatrixSparse<T>)a.Clone();
+			}
+			int a_rows = a._rows;
+			int a_columns = a._columns;
+			int b_rows = a_rows - 1;
+			int b_columns = a_columns - 1;
+			int b_length = b_rows * b_columns;
+			if (b is null || b._map.Length != b_length)
+			{
+				b = new MatrixSparse<T>(b_rows, b_columns, b_length);
+			}
+			else
+			{
+				b._rows = b_rows;
+				b._columns = b_columns;
+			}
+			T[] B = b._map;
+			T[] A = a._map;
+			int m = 0, n = 0;
+			for (int i = 0; i < a_rows; i++)
+			{
+				if (i == row)
+				{
+					continue;
+				}
+				int i_times_a_columns = i * a_columns;
+				int m_times_b_columns = m * b_columns;
+				n = 0;
+				for (int j = 0; j < a_columns; j++)
+				{
+					if (j == column)
+					{
+						continue;
+					}
+					T temp = A[i_times_a_columns + j];
+					B[m_times_b_columns + n] = temp;
+					n++;
+				}
+				m++;
+			}
+		}
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="a">The matrix to get the minor of.</param>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <returns>The minor of the matrix.</returns>
+		public static MatrixSparse<T> Minor(MatrixSparse<T> a, int row, int column)
+		{
+			MatrixSparse<T> b = null;
+			Minor(a, row, column, ref b);
+			return b;
+		}
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		public override void Minor(int row, int column, ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = null;
+			if (b is MatrixSparse<T> bDense)
+			{
+				c = bDense;
+			}
+			Minor(this, row, column, ref c);
+			b = c;
+		}
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <param name="b">The minor of the matrix.</param>
+		public void Minor(int row, int column, ref MatrixSparse<T> b) =>
+			Minor(this, row, column, ref b);
+
+		/// <summary>Gets the minor of a matrix.</summary>
+		/// <param name="row">The restricted row to form the minor.</param>
+		/// <param name="column">The restricted column to form the minor.</param>
+		/// <returns>The minor of the matrix.</returns>
+		public new MatrixSparse<T> Minor(int row, int column) =>
+			Minor(this, row, column);
+
+		#endregion
+
+		#region ConcatenateRowWise
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="a">The left matrix of the concatenation.</param>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		private static void ConcatenateRowWise(MatrixSparse<T> a, MatrixSparse<T> b, ref MatrixSparse<T> c)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (b is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (a._rows != b._rows)
+			{
+				throw new MathematicsException("Arguments invalid !(" + nameof(a) + "." + nameof(a.Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
+			}
+			int a_columns = a._columns;
+			int b_columns = b._columns;
+			int c_rows = a._rows;
+			int c_columns = a._columns + b._columns;
+			int c_length = c_rows * c_columns;
+			if (c is null ||
+				c._map.Length != c_length ||
+				object.ReferenceEquals(a, c) ||
+				object.ReferenceEquals(b, c))
+			{
+				c = new MatrixSparse<T>(c_rows, c_columns, c_length);
+			}
+			else
+			{
+				c._rows = c_rows;
+				c._columns = c_columns;
+			}
+			T[] A = a._map;
+			T[] B = b._map;
+			T[] C = c._map;
+			for (int i = 0; i < c_rows; i++)
+			{
+				int i_times_a_columns = i * a_columns;
+				int i_times_b_columns = i * b_columns;
+				int i_times_c_columns = i * c_columns;
+				for (int j = 0; j < c_columns; j++)
+				{
+					if (j < a_columns)
+					{
+						C[i_times_c_columns + j] = A[i_times_a_columns + j];
+					}
+					else
+					{
+						C[i_times_c_columns + j] = B[i_times_b_columns + j - a_columns];
+					}
+				}
+			}
+		}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="a">The left matrix of the concatenation.</param>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <returns>The resulting matrix of the concatenation.</returns>
+		public static MatrixSparse<T> ConcatenateRowWise(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			MatrixSparse<T> c = null;
+			ConcatenateRowWise(a, b, ref c);
+			return c;
+		}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		public override void ConcatenateRowWise(Matrix<T> b, ref Matrix<T> c)
+		{
+			if (b is MatrixSparse<T> bDense)
+			{
+				MatrixSparse<T> d = c is MatrixSparse<T> cDense
+					? cDense
+					: null;
+				ConcatenateRowWise(this, bDense, ref d);
+				c = d;
+			}
+			else
+			{
+				base.ConcatenateRowWise(b, ref c);
+			}
+		}
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <param name="c">The resulting matrix of the concatenation.</param>
+		public void ConcatenateRowWise(MatrixSparse<T> b, ref MatrixSparse<T> c) =>
+			ConcatenateRowWise(this, b, ref c);
+
+		/// <summary>Combines two matrices from left to right 
+		/// (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+		/// <param name="b">The right matrix of the concatenation.</param>
+		/// <returns>The resulting matrix of the concatenation.</returns>
+		public MatrixSparse<T> ConcatenateRowWise(MatrixSparse<T> b) =>
+			ConcatenateRowWise(this, b);
+
+		#endregion
+
+		#region Echelon
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		/// <bug>Failing for non-floating point rational types due to zero how values are being compared.</bug>
+		private static void Echelon(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (ReferenceEquals(a, b))
+			{
+				a = (MatrixSparse<T>)a.Clone();
+			}
+			int Rows = a.Rows;
+			if (b != null && b._map.Length == a._map.Length)
+			{
+				b._rows = Rows;
+				b._columns = a._columns;
+				CloneContents(a, b);
+			}
+			else
+			{
+				b = (MatrixSparse<T>)a.Clone();
+			}
+			for (int i = 0; i < Rows; i++)
+			{
+				if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
+				{
+					for (int j = i + 1; j < Rows; j++)
+					{
+						if (Compute.NotEqual(b.Get(j, i), Constant<T>.Zero))
+						{
+							SwapRows(b, i, j);
+						}
+					}
+				}
+				if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
+				{
+					continue;
+				}
+				if (Compute.NotEqual(b.Get(i, i), Constant<T>.One))
+				{
+					for (int j = i + 1; j < Rows; j++)
+					{
+						if (Compute.Equal(b.Get(j, i), Constant<T>.One))
+						{
+							SwapRows(b, i, j);
+						}
+					}
+				}
+				T rowMultipier = Compute.Divide(Constant<T>.One, b.Get(i, i));
+				RowMultiplication(b, i, rowMultipier);
+				for (int j = i + 1; j < Rows; j++)
+				{
+					T rowAddend = Compute.Negate(b.Get(j, i));
+					RowAddition(b, j, i, rowAddend);
+				}
+			}
+		}
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+		/// <returns>The echelon of the matrix (aka REF).</returns>
+		public static MatrixSparse<T> Echelon(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			Echelon(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		public override void Echelon(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			Echelon(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <param name="b">The echelon of the matrix (aka REF).</param>
+		public void Echelon(ref MatrixSparse<T> b) =>
+			Echelon(this, ref b);
+
+		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
+		/// <returns>The echelon of the matrix (aka REF).</returns>
+		public new MatrixSparse<T> Echelon() =>
+			Echelon(this);
+
+		#endregion
+
+		#region ReducedEchelon
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		private static void ReducedEchelon(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			int Rows = a.Rows;
+			int Columns = a.Columns;
+			if (object.ReferenceEquals(a, b))
+			{
+				b = (MatrixSparse<T>)a.Clone();
+			}
+			else if (b != null && b._map.Length == a._map.Length)
+			{
+				b._rows = Rows;
+				b._columns = a._columns;
+				CloneContents(a, b);
+			}
+			else
+			{
+				b = (MatrixSparse<T>)a.Clone();
+			}
+			int lead = 0;
+			for (int r = 0; r < Rows; r++)
+			{
+				if (Columns <= lead) break;
+				int i = r;
+				while (Compute.Equal(b.Get(i, lead), Constant<T>.Zero))
+				{
+					i++;
+					if (i == Rows)
+					{
+						i = r;
+						lead++;
+						if (Columns == lead)
+						{
+							lead--;
+							break;
+						}
+					}
+				}
+				for (int j = 0; j < Columns; j++)
+				{
+					T temp = b.Get(r, j);
+					b.Set(r, j, b.Get(i, j));
+					b.Set(i, j, temp);
+				}
+				T div = b.Get(r, lead);
+				if (Compute.NotEqual(div, Constant<T>.Zero))
+				{
+					for (int j = 0; j < Columns; j++)
+					{
+						b.Set(r, j, Compute.Divide(b.Get(r, j), div));
+					}
+				}
+				for (int j = 0; j < Rows; j++)
+				{
+					if (j != r)
+					{
+						T sub = b.Get(j, lead);
+						for (int k = 0; k < Columns; k++)
+						{
+							b.Set(j, k, Compute.Subtract(b.Get(j, k), Compute.Multiply(sub, b.Get(r, k))));
+						}
+					}
+				}
+				lead++;
+			}
+
+			#region Old Version
+
+			//if (a is null)
+			//{
+			//    throw new ArgumentNullException(nameof(a));
+			//}
+			//if (object.ReferenceEquals(a, b))
+			//{
+			//    a = a.Clone();
+			//}
+			//int Rows = a.Rows;
+			//if (b != null && b._matrix.Length == a._matrix.Length)
+			//{
+			//    b._rows = Rows;
+			//    b._columns = a._columns;
+			//    CloneContents(a, b);
+			//}
+			//else
+			//{
+			//    b = a.Clone();
+			//}
+			//for (int i = 0; i < Rows; i++)
+			//{
+			//    if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
+			//    {
+			//        for (int j = i + 1; j < Rows; j++)
+			//        {
+			//            if (Compute.NotEqual(b.Get(j, i), Constant<T>.Zero))
+			//            {
+			//                SwapRows(b, i, j);
+			//            }
+			//        }
+			//    }
+			//    if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
+			//    {
+			//        continue;
+			//    }
+			//    if (Compute.NotEqual(b.Get(i, i), Constant<T>.One))
+			//    {
+			//        for (int j = i + 1; j < Rows; j++)
+			//        {
+			//            if (Compute.Equal(b.Get(j, i), Constant<T>.One))
+			//            {
+			//                SwapRows(b, i, j);
+			//            }
+			//        }
+			//    }
+			//    T rowMiltiplier = Compute.Divide(Constant<T>.One, b.Get(i, i));
+			//    RowMultiplication(b, i, rowMiltiplier);
+			//    for (int j = i + 1; j < Rows; j++)
+			//    {
+			//        T rowAddend = Compute.Negate(b.Get(j, i));
+			//        RowAddition(b, j, i, rowAddend);
+			//    }
+			//    for (int j = i - 1; j >= 0; j--)
+			//    {
+			//        T rowAddend = Compute.Negate(b.Get(j, i));
+			//        RowAddition(b, j, i, rowAddend);
+			//    }
+			//}
+
+			#endregion
+		}
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+		/// <returns>The reduced echelon of the matrix (aka RREF).</returns>
+		public static MatrixSparse<T> ReducedEchelon(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			ReducedEchelon(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		public override void ReducedEchelon(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			ReducedEchelon(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+		/// <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+		public void ReducedEchelon(ref MatrixSparse<T> b) =>
+			ReducedEchelon(this, ref b);
+
+		/// <summary>Matrixs the reduced echelon form of this matrix (aka RREF).</summary>
+		/// <returns>The computed reduced echelon form of this matrix (aka RREF).</returns>
+		public new MatrixSparse<T> ReducedEchelon() =>
+			ReducedEchelon(this);
+
+		#endregion
+
+		#region Inverse
+
+		/// <summary>Calculates the inverse of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the inverse of.</param>
+		/// <param name="b">The inverse of the matrix.</param>
+		private static void Inverse(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (!a.IsSquare)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			}
+			T determinent = Determinent(a);
+			if (Compute.Equal(determinent, Constant<T>.Zero))
+			{
+				throw new MathematicsException("Singular matrix encountered during inverse caluculation (cannot be inversed).");
+			}
+			MatrixSparse<T> adjoint = a.Adjoint();
+			int dimension = a.Rows;
+			int Length = a.Length;
+			if (object.ReferenceEquals(a, b))
+			{
+				b = (MatrixSparse<T>)a.Clone();
+			}
+			else if (b != null && b.Length == Length)
+			{
+				b._rows = dimension;
+				b._columns = dimension;
+			}
+			else
+			{
+				b = new MatrixSparse<T>(dimension, dimension, Length);
+			}
+			for (int i = 0; i < dimension; i++)
+			{
+				for (int j = 0; j < dimension; j++)
+				{
+					b.Set(i, j, Compute.Divide(adjoint.Get(i, j), determinent));
+				}
+			}
+
+			#region Old Version
+
+			//// Note: this method can be optimized...
+
+			//if (a is null)
+			//{
+			//    throw new ArgumentNullException(nameof(a));
+			//}
+			//if (Compute.Equal(Determinent(a), Constant<T>.Zero))
+			//{
+			//    throw new MathematicsException("inverse calculation failed.");
+			//}
+			//Matrix<T> identity = FactoryIdentity(a.Rows, a.Columns);
+			//Matrix<T> rref = a.Clone();
+			//for (int i = 0; i < a.Rows; i++)
+			//{
+			//    if (Compute.Equal(rref[i, i], Constant<T>.Zero))
+			//    {
+			//        for (int j = i + 1; j < rref.Rows; j++)
+			//        {
+			//            if (Compute.NotEqual(rref[j, i], Constant<T>.Zero))
+			//            {
+			//                SwapRows(rref, i, j);
+			//                SwapRows(identity, i, j);
+			//            }
+			//        }
+			//    }
+			//    T identityRowMultiplier = Compute.Divide(Constant<T>.One, rref[i, i]);
+			//    RowMultiplication(identity, i, identityRowMultiplier);
+			//    RowMultiplication(rref, i, identityRowMultiplier);
+			//    for (int j = i + 1; j < rref.Rows; j++)
+			//    {
+			//        T rowAdder = Compute.Negate(rref[j, i]);
+			//        RowAddition(identity, j, i, rowAdder);
+			//        RowAddition(rref, j, i, rowAdder);
+			//    }
+			//    for (int j = i - 1; j >= 0; j--)
+			//    {
+			//        T rowAdder = Compute.Negate(rref[j, i]);
+			//        RowAddition(identity, j, i, rowAdder);
+			//        RowAddition(rref, j, i, rowAdder);
+			//    }
+			//}
+			//b = identity;
+
+			#endregion
+
+			#region Alternate Version
+			//Matrix<T> identity = Matrix<T>.FactoryIdentity(matrix.Rows, matrix.Columns);
+			//Matrix<T> rref = matrix.Clone();
+			//for (int i = 0; i < matrix.Rows; i++)
+			//{
+			//	if (Compute.Equate(rref[i, i], Compute.FromInt32(0)))
+			//		for (int j = i + 1; j < rref.Rows; j++)
+			//			if (!Compute.Equate(rref[j, i], Compute.FromInt32(0)))
+			//			{
+			//				Matrix<T>.SwapRows(rref, i, j);
+			//				Matrix<T>.SwapRows(identity, i, j);
+			//			}
+			//	Matrix<T>.RowMultiplication(identity, i, Compute.Divide(Compute.FromInt32(1), rref[i, i]));
+			//	Matrix<T>.RowMultiplication(rref, i, Compute.Divide(Compute.FromInt32(1), rref[i, i]));
+			//	for (int j = i + 1; j < rref.Rows; j++)
+			//	{
+			//		Matrix<T>.RowAddition(identity, j, i, Compute.Negate(rref[j, i]));
+			//		Matrix<T>.RowAddition(rref, j, i, Compute.Negate(rref[j, i]));
+			//	}
+			//	for (int j = i - 1; j >= 0; j--)
+			//	{
+			//		Matrix<T>.RowAddition(identity, j, i, Compute.Negate(rref[j, i]));
+			//		Matrix<T>.RowAddition(rref, j, i, Compute.Negate(rref[j, i]));
+			//	}
+			//}
+			//return identity;
+			#endregion
+		}
+
+		/// <summary>Calculates the inverse of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the inverse of.</param>
+		/// <returns>The inverse of the matrix.</returns>
+		public static MatrixSparse<T> Inverse(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			Inverse(a, ref b);
+			return b;
+		}
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public override void Inverse(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			Inverse(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public void Inverse(ref MatrixSparse<T> b) => Inverse(this, ref b);
+
+		/// <summary>Matrixs the inverse of this matrix.</summary>
+		/// <returns>The inverse of this matrix.</returns>
+		public new MatrixSparse<T> Inverse() => Inverse(this);
+
+		#endregion
+
+		#region Adjoint
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the adjoint of.</param>
+		/// <param name="b">The adjoint of the matrix.</param>
+		private static void Adjoint(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (!a.IsSquare)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			}
+			int dimension = a.Rows;
+			int Length = a.Length;
+			if (object.ReferenceEquals(a, b))
+			{
+				b = (MatrixSparse<T>)a.Clone();
+			}
+			else if (b != null && b.Length == Length)
+			{
+				b._rows = dimension;
+				b._columns = dimension;
+			}
+			else
+			{
+				b = new MatrixSparse<T>(dimension, dimension, Length);
+			}
+
+			if (dimension == 1)
+			{
+				b.Set(0, 0, Constant<T>.One);
+				return;
+			}
+			T sign = Constant<T>.One;
+			MatrixSparse<T> temp = new MatrixSparse<T>(dimension, dimension, Length);
+			for (int i = 0; i < dimension; i++)
+			{
+				for (int j = 0; j < dimension; j++)
+				{
+					GetCofactor(a, temp, i, j, dimension);
+					sign = (i + j) % 2 == 0 ? Constant<T>.One : Constant<T>.NegativeOne;
+					b.Set(j, i, Compute.Multiply(sign, GetDeterminant(temp, dimension - 1)));
+				}
+			}
+
+			#region Old Version
+
+			//if (a is null)
+			//{
+			//    throw new ArgumentNullException(nameof(a));
+			//}
+			//if (!a.IsSquare)
+			//{
+			//    throw new MathematicsException("Argument invalid !(" + nameof(a) + "." + nameof(a.IsSquare) + ")");
+			//}
+			//if (object.ReferenceEquals(a, b))
+			//{
+			//    a = a.Clone();
+			//}
+			//int Length = a.Length;
+			//int Rows = a.Rows;
+			//int Columns = a.Columns;
+			//if (b != null && b.Length == Length)
+			//{
+			//    b._rows = Rows;
+			//    b._columns = Columns;
+			//}
+			//else
+			//{
+			//    b = new Matrix<T>(Rows, Columns, Length);
+			//}
+			//for (int i = 0; i < Rows; i++)
+			//{
+			//    for (int j = 0; j < Columns; j++)
+			//    {
+			//        if (Compute.IsEven(a.Get(i, j)))
+			//        {
+			//            b[i, j] = Determinent(Minor(a, i, j));
+			//        }
+			//        else
+			//        {
+			//            b[i, j] = Compute.Negate(Determinent(Minor(a, i, j)));
+			//        }
+			//    }
+			//}
+
+			#endregion
+		}
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="a">The matrix to calculate the adjoint of.</param>
+		/// <returns>The adjoint of the matrix.</returns>
+		public static MatrixSparse<T> Adjoint(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			Adjoint(a, ref b);
+			return b;
+		}
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="b">The adjoint of the matrix.</param>
+		public override void Adjoint(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			Adjoint(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <param name="b">The adjoint of the matrix.</param>
+		public void Adjoint(ref MatrixSparse<T> b) =>
+			Adjoint(this, ref b);
+
+		/// <summary>Calculates the adjoint of a matrix.</summary>
+		/// <returns>The adjoint of the matrix.</returns>
+		public new MatrixSparse<T> Adjoint() =>
+			Adjoint(this);
+
+		#endregion
+
+		#region Transpose
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="a">The matrix to transpose.</param>
+		/// <param name="b">The transpose of the matrix.</param>
+		private static void Transpose(MatrixSparse<T> a, ref MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			if (ReferenceEquals(a, b))
+			{
+				if (b.IsSquare)
+				{
+					TransposeContents(b);
+					return;
+				}
+			}
+			int Length = a.Length;
+			int Rows = a.Columns;
+			int Columns = a.Rows;
+			if (b != null && b.Length == a.Length && !ReferenceEquals(a, b))
+			{
+				b._rows = Rows;
+				b._columns = Columns;
+			}
+			else
+			{
+				b = new MatrixSparse<T>(Rows, Columns, Length);
+			}
+			for (int i = 0; i < Rows; i++)
+			{
+				for (int j = 0; j < Columns; j++)
+				{
+					b.Set(i, j, a.Get(j, i));
+				}
+			}
+		}
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="a">The matrix to transpose.</param>
+		/// <returns>The transpose of the matrix.</returns>
+		public static MatrixSparse<T> Transpose(MatrixSparse<T> a)
+		{
+			MatrixSparse<T> b = null;
+			Transpose(a, ref b);
+			return b;
+		}
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="b">The transpose of the matrix.</param>
+		public void Transpose(ref MatrixSparse<T> b) =>
+			Transpose(this, ref b);
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <param name="b">The transpose of the matrix.</param>
+		public override void Transpose(ref Matrix<T> b)
+		{
+			MatrixSparse<T> c = b is MatrixSparse<T> bDense ? bDense : null;
+			Transpose(this, ref c);
+			b = c;
+		}
+
+		/// <summary>Returns the transpose of a matrix.</summary>
+		/// <returns>The transpose of the matrix.</returns>
+		public new MatrixSparse<T> Transpose() =>
+			Transpose(this);
+
+		#endregion
+
+		#region DecomposeLowerUpper
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="matrix">The matrix to decompose.</param>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public static void DecomposeLowerUpper(MatrixSparse<T> matrix, ref MatrixSparse<T> lower, ref MatrixSparse<T> upper)
+		{
+			// Note: this method can be optimized...
+
+			lower = MatrixSparse<T>.FactoryIdentity(matrix.Rows, matrix.Columns);
+			upper = (MatrixSparse<T>)matrix.Clone();
+			int[] permutation = new int[matrix.Rows];
+			for (int i = 0; i < matrix.Rows; i++)
+			{
+				permutation[i] = i;
+			}
+			T p = Constant<T>.Zero, pom2, detOfP = Constant<T>.One;
+			int k0 = 0, pom1 = 0;
+			for (int k = 0; k < matrix.Columns - 1; k++)
+			{
+				p = Constant<T>.Zero;
+				for (int i = k; i < matrix.Rows; i++)
+				{
+					if (Compute.GreaterThan(Compute.GreaterThan(upper[i, k], Constant<T>.Zero) ? upper[i, k] : Compute.Negate(upper[i, k]), p))
+					{
+						p = Compute.GreaterThan(upper[i, k], Constant<T>.Zero) ? upper[i, k] : Compute.Negate(upper[i, k]);
+						k0 = i;
+					}
+				}
+				if (Compute.Equal(p, Constant<T>.Zero))
+				{
+					throw new MathematicsException("The matrix is singular!");
+				}
+				pom1 = permutation[k];
+				permutation[k] = permutation[k0];
+				permutation[k0] = pom1;
+				for (int i = 0; i < k; i++)
+				{
+					pom2 = lower[k, i];
+					lower[k, i] = lower[k0, i];
+					lower[k0, i] = pom2;
+				}
+				if (k != k0)
+				{
+					detOfP = Compute.Multiply(detOfP, Constant<T>.NegativeOne);
+				}
+				for (int i = 0; i < matrix.Columns; i++)
+				{
+					pom2 = upper[k, i];
+					upper[k, i] = upper[k0, i];
+					upper[k0, i] = pom2;
+				}
+				for (int i = k + 1; i < matrix.Rows; i++)
+				{
+					lower[i, k] = Compute.Divide(upper[i, k], upper[k, k]);
+					for (int j = k; j < matrix.Columns; j++)
+					{
+						upper[i, j] = Compute.Subtract(upper[i, j], Compute.Multiply(lower[i, k], upper[k, j]));
+					}
+				}
+			}
+
+			#region Alternate Version
+			//lower = Matrix<T>.FactoryIdentity(matrix.Rows, matrix.Columns);
+			//upper = matrix.Clone();
+			//int[] permutation = new int[matrix.Rows];
+			//for (int i = 0; i < matrix.Rows; i++) permutation[i] = i;
+			//T p = 0, pom2, detOfP = 1;
+			//int k0 = 0, pom1 = 0;
+			//for (int k = 0; k < matrix.Columns - 1; k++)
+			//{
+			//	p = 0;
+			//	for (int i = k; i < matrix.Rows; i++)
+			//		if ((upper[i, k] > 0 ? upper[i, k] : -upper[i, k]) > p)
+			//		{
+			//			p = upper[i, k] > 0 ? upper[i, k] : -upper[i, k];
+			//			k0 = i;
+			//		}
+			//	if (p == 0)
+			//		throw new System.Exception("The matrix is singular!");
+			//	pom1 = permutation[k];
+			//	permutation[k] = permutation[k0];
+			//	permutation[k0] = pom1;
+			//	for (int i = 0; i < k; i++)
+			//	{
+			//		pom2 = lower[k, i];
+			//		lower[k, i] = lower[k0, i];
+			//		lower[k0, i] = pom2;
+			//	}
+			//	if (k != k0)
+			//		detOfP *= -1;
+			//	for (int i = 0; i < matrix.Columns; i++)
+			//	{
+			//		pom2 = upper[k, i];
+			//		upper[k, i] = upper[k0, i];
+			//		upper[k0, i] = pom2;
+			//	}
+			//	for (int i = k + 1; i < matrix.Rows; i++)
+			//	{
+			//		lower[i, k] = upper[i, k] / upper[k, k];
+			//		for (int j = k; j < matrix.Columns; j++)
+			//			upper[i, j] = upper[i, j] - lower[i, k] * upper[k, j];
+			//	}
+			//}
+			#endregion
+		}
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public void DecomposeLowerUpper(ref MatrixSparse<T> lower, ref MatrixSparse<T> upper)
+		{
+			DecomposeLowerUpper(this, ref lower, ref upper);
+		}
+
+		/// <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+		/// <param name="lower">The computed lower triangular matrix.</param>
+		/// <param name="upper">The computed upper triangular matrix.</param>
+		public override void DecomposeLowerUpper(ref Matrix<T> lower, ref Matrix<T> upper)
+		{
+			MatrixSparse<T> LOWER = lower is MatrixSparse<T> lowerDense ? lowerDense : null;
+			MatrixSparse<T> UPPER = upper is MatrixSparse<T> upperDense ? upperDense : null;
+			DecomposeLowerUpper(this, ref LOWER, ref UPPER);
+		}
+
+		#endregion
+
+		#region Rotate
+
+		/// <summary>Rotates a 4x4 matrix around an 3D axis by a specified angle.</summary>
+		/// /// <param name="matrix">The 4x4 matrix to rotate.</param>
+		/// <param name="angle">The angle of rotation around the axis.</param>
+		/// <param name="axis">The 3D axis to rotate the matrix around.</param>
+		/// <returns>The rotated matrix.</returns>
+		public static MatrixSparse<T> Rotate4x4(MatrixSparse<T> matrix, Angle<T> angle, Vector<T> axis, ref MatrixSparse<T> b) =>
+			throw new NotImplementedException();
+
+		/// <summary>Rotates a 4x4 matrix around an 3D axis by a specified angle.</summary>
+		/// /// <param name="matrix">The 4x4 matrix to rotate.</param>
+		/// <param name="angle">The angle of rotation around the axis.</param>
+		/// <param name="axis">The 3D axis to rotate the matrix around.</param>
+		/// <returns>The rotated matrix.</returns>
+		public static MatrixSparse<T> Rotate4x4(MatrixSparse<T> matrix, Angle<T> angle, Vector<T> axis)
+		{
+			if (axis is null)
+			{
+				throw new ArgumentNullException(nameof(axis));
+			}
+			if (matrix is null)
+			{
+				throw new ArgumentNullException(nameof(matrix));
+			}
+			if (axis._vector.Length != 3)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(axis) + "." + nameof(axis.Dimensions) + " == 3)");
+			}
+			if (matrix._rows != 4 || matrix._columns != 4)
+			{
+				throw new MathematicsException("Argument invalid !(" + nameof(matrix) + "." + nameof(matrix.Rows) + " == 4 && " + nameof(matrix) + "." + nameof(matrix.Columns) + " == 4)");
+			}
+
+			// if the angle is zero, no rotation is required
+			if (Compute.Equal(angle._measurement, Constant<T>.Zero))
+			{
+				return (MatrixSparse<T>)matrix.Clone();
+			}
+
+			T cosine = Compute.CosineSystem(angle);
+			T sine = Compute.SineSystem(angle);
+			T oneMinusCosine = Compute.Subtract(Constant<T>.One, cosine);
+			T xy = Compute.Multiply(axis.X, axis.Y);
+			T yz = Compute.Multiply(axis.Y, axis.Z);
+			T xz = Compute.Multiply(axis.X, axis.Z);
+			T xs = Compute.Multiply(axis.X, sine);
+			T ys = Compute.Multiply(axis.Y, sine);
+			T zs = Compute.Multiply(axis.Z, sine);
+
+			T f00 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.X, axis.X), oneMinusCosine), cosine);
+			T f01 = Compute.Add(Compute.Multiply(xy, oneMinusCosine), zs);
+			T f02 = Compute.Subtract(Compute.Multiply(xz, oneMinusCosine), ys);
+			// n[3] not used
+			T f10 = Compute.Subtract(Compute.Multiply(xy, oneMinusCosine), zs);
+			T f11 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.Y, axis.Y), oneMinusCosine), cosine);
+			T f12 = Compute.Add(Compute.Multiply(yz, oneMinusCosine), xs);
+			// n[7] not used
+			T f20 = Compute.Add(Compute.Multiply(xz, oneMinusCosine), ys);
+			T f21 = Compute.Subtract(Compute.Multiply(yz, oneMinusCosine), xs);
+			T f22 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.Z, axis.Z), oneMinusCosine), cosine);
+
+			// Row 1
+			T _0_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f00), Compute.Multiply(matrix[1, 0], f01)), Compute.Multiply(matrix[2, 0], f02));
+			T _0_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f00), Compute.Multiply(matrix[1, 1], f01)), Compute.Multiply(matrix[2, 1], f02));
+			T _0_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f00), Compute.Multiply(matrix[1, 2], f01)), Compute.Multiply(matrix[2, 2], f02));
+			T _0_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f00), Compute.Multiply(matrix[1, 3], f01)), Compute.Multiply(matrix[2, 3], f02));
+			// Row 2
+			T _1_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f10), Compute.Multiply(matrix[1, 0], f11)), Compute.Multiply(matrix[2, 0], f12));
+			T _1_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f10), Compute.Multiply(matrix[1, 1], f11)), Compute.Multiply(matrix[2, 1], f12));
+			T _1_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f10), Compute.Multiply(matrix[1, 2], f11)), Compute.Multiply(matrix[2, 2], f12));
+			T _1_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f10), Compute.Multiply(matrix[1, 3], f11)), Compute.Multiply(matrix[2, 3], f12));
+			// Row 3
+			T _2_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f20), Compute.Multiply(matrix[1, 0], f21)), Compute.Multiply(matrix[2, 0], f22));
+			T _2_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f20), Compute.Multiply(matrix[1, 1], f21)), Compute.Multiply(matrix[2, 1], f22));
+			T _2_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f20), Compute.Multiply(matrix[1, 2], f21)), Compute.Multiply(matrix[2, 2], f22));
+			T _2_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f20), Compute.Multiply(matrix[1, 3], f21)), Compute.Multiply(matrix[2, 3], f22));
+			// Row 4
+			T _3_0 = Constant<T>.Zero;
+			T _3_1 = Constant<T>.Zero;
+			T _3_2 = Constant<T>.Zero;
+			T _3_3 = Constant<T>.One;
+
+			return new MatrixSparse<T>(4, 4, (row, column) =>
+			{
+				switch (row)
+				{
+					case 0:
+						switch (column)
+						{
+							case 0: return _0_0;
+							case 1: return _0_1;
+							case 2: return _0_2;
+							case 3: return _0_3;
+							default: throw new MathematicsException("BUG");
+						}
+					case 1:
+						switch (column)
+						{
+							case 0: return _1_0;
+							case 1: return _1_1;
+							case 2: return _1_2;
+							case 3: return _1_3;
+							default: throw new MathematicsException("BUG");
+						}
+					case 2:
+						switch (column)
+						{
+							case 0: return _2_0;
+							case 1: return _2_1;
+							case 2: return _2_2;
+							case 3: return _2_3;
+							default: throw new MathematicsException("BUG");
+						}
+					case 3:
+						switch (column)
+						{
+							case 0: return _3_0;
+							case 1: return _3_1;
+							case 2: return _3_2;
+							case 3: return _3_3;
+							default: throw new MathematicsException("BUG");
+						}
+					default:
+						throw new MathematicsException("BUG");
+				}
+			});
+		}
+
+		public override void Rotate4x4(Angle<T> angle, Vector<T> axis, ref Matrix<T> b)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Rotate4x4(Angle<T> angle, Vector<T> axis, ref MatrixSparse<T> b)
+		{
+			throw new NotImplementedException();
+		}
+
+		public MatrixSparse<T> Rotate4x4(Angle<T> angle, Vector<T> axis)
+		{
+			return Rotate4x4(this, angle, axis);
+		}
+
+		#endregion
+
+		#region Equal
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		private static bool Equal(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			if (a is null)
+			{
+				if (b is null)
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			if (b is null)
+			{
+				return false;
+			}
+			int Rows = a.Rows;
+			int Columns = a.Columns;
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				return false;
+			}
+			T[] A = a._map;
+			T[] B = b._map;
+			int Length = A.Length;
+			for (int i = 0; i < Length; i++)
+			{
+				if (!Compute.Equal(A[i], B[i]))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public static bool operator ==(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			return Equal(a, b);
+		}
+
+		/// <summary>Does a value non-equality check.</summary>
+		/// <param name="a">The first matrix to check for non-equality.</param>
+		/// <param name="b">The second matrix to check for non-equality.</param>
+		/// <returns>True if values are not equal, false if not.</returns>
+		public static bool operator !=(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			return !Equal(a, b);
+		}
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public override bool Equal(Matrix<T> b)
+		{
+			if (b is MatrixSparse<T> bDense)
+			{
+				return this == bDense;
+			}
+			else
+			{
+				return base.Equal(b);
+			}
+		}
+
+		/// <summary>Does a value equality check.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public bool Equal(MatrixSparse<T> b)
+		{
+			return this == b;
+		}
+
+		#endregion
+
+		#region Equal (+leniency)
+
+		/// <summary>Does a value equality check with leniency.</summary>
+		/// <param name="a">The first matrix to check for equality.</param>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		private static bool Equal(MatrixSparse<T> a, MatrixSparse<T> b, T leniency)
+		{
+			if (a is null)
+			{
+				if (b is null)
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			if (b is null)
+			{
+				return false;
+			}
+			int Rows = a.Rows;
+			int Columns = a.Columns;
+			if (Rows != b.Rows || Columns != b.Columns)
+			{
+				return false;
+			}
+			T[] A = a._map;
+			T[] B = b._map;
+			int Length = A.Length;
+			for (int i = 0; i < Length; i++)
+			{
+				if (!Compute.EqualLeniency(A[i], B[i], leniency))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/// <summary>Does a value equality check with leniency.</summary>
+		/// <param name="b">The second matrix to check for equality.</param>
+		/// <param name="leniency">How much the values can vary but still be considered equal.</param>
+		/// <returns>True if values are equal, false if not.</returns>
+		public bool Equal(MatrixSparse<T> b, T leniency)
+		{
+			return Equal(this, b, leniency);
+		}
+
+		#endregion
+
+		#endregion
+
+		#region Other Methods
+
+		#region Get/Set
+
+		internal new T Get(int row, int column)
+		{
+			return _map[row * Columns + column];
+		}
+
+		internal new void Set(int row, int column, T value)
+		{
+			_map[row * Columns + column] = value;
+		}
+
+		#endregion
+
+		#region Format
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="matrix">The matrix to fill the values of.</param>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public static void Format(MatrixSparse<T> matrix, Func<int, int, T> func)
+		{
+			int Rows = matrix.Rows;
+			int Columns = matrix.Columns;
+			int i = 0;
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					matrix._map[i++] = func(row, column);
+				}
+			}
+		}
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public override void Format(Func<int, int, T> func) =>
+			Format(this, func);
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="matrix">The matrix to fill the values of.</param>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public static void Format(MatrixSparse<T> matrix, Func<int, T> func)
+		{
+			int Rows = matrix.Rows;
+			int Columns = matrix.Columns;
+			int i = 0;
+			for (int row = 0; row < Rows; row++)
+			{
+				for (int column = 0; column < Columns; column++)
+				{
+					matrix._map[i] = func(i);
+					i++;
+				}
+			}
+		}
+
+		/// <summary>Fills a matrix with values using a delegate.</summary>
+		/// <param name="func">The function to set the values at the relative indeces.</param>
+		public override void Format(Func<int, T> func) =>
+			Format(this, func);
+
+		#endregion
+
+		#region CloneContents
+
+		internal static void CloneContents(MatrixSparse<T> a, MatrixSparse<T> b)
+		{
+			b._map.Clear();
+			b._uniform = a._uniform;
+			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in a._map)
+			{
+				b._map.Add(pair.Key, pair.Value);
+			}
+		}
+
+		#endregion
+
+		#region TransposeContents
+
+		internal static void TransposeContents(MatrixSparse<T> a)
+		{
+			System.Collections.Generic.Dictionary<int, T> matrix = new System.Collections.Generic.Dictionary<int, T>();
+			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in a._map)
+			{
+				int column = pair.Key % a.Columns;
+				int row = (pair.Key - column) / a.Columns;
+				matrix.Add(row * a.Columns + column, pair.Value);
+			}
+			a._map.Clear();
+			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in matrix)
+			{
+				a._map.Add(pair.Key, pair.Value);
+			}
+		}
+
+		#endregion
+
+		#region Clone
+
+		/// <summary>Creates a copy of a matrix.</summary>
+		/// <param name="a">The matrix to copy.</param>
+		/// <returns>The copy of this matrix.</returns>
+		public static MatrixSparse<T> Clone(MatrixSparse<T> a)
+		{
+			if (a is null)
+			{
+				throw new ArgumentNullException(nameof(a));
+			}
+			return new MatrixSparse<T>(a);
+		}
+
+		/// <summary>Copies this matrix.</summary>
+		/// <returns>The copy of this matrix.</returns>
+		public override Matrix<T> Clone()
+		{
+			return Clone(this);
+		}
+
+		#endregion
+
+		#endregion
+
+		#region Casting Operators
+
+		/// <summary>Converts a T[,] into a matrix.</summary>
+		/// <param name="array">The T[,] to convert to a matrix.</param>
+		/// <returns>The resulting matrix after conversion.</returns>
+		public static implicit operator MatrixSparse<T>(T[,] array)
+		{
+			int rows = array.GetLength(0);
+			int columns = array.GetLength(1);
+			MatrixSparse<T> matrix = new MatrixSparse<T>(rows, columns);
+			for (int row = 0; row < rows; row++)
+			{
+				for (int column = 0; column < columns; column++)
+				{
+					matrix[row, column] = array[row, column];
+				}
+			}
+			return matrix;
+		}
+
+		/// <summary>Converts a matrix into a T[,].</summary>
+		/// <param name="matrix">The matrix toconvert to a T[,].</param>
+		/// <returns>The resulting T[,] after conversion.</returns>
+		public static explicit operator T[,](MatrixSparse<T> matrix)
+		{
+			T[,] array = new T[matrix.Rows, matrix.Columns];
+			for (int row = 0; row < matrix.Rows; row++)
+			{
+				for (int column = 0; column < matrix.Columns; column++)
+				{
+					array[row, column] = matrix[row, column];
+				}
+			}
+			return array;
+		}
+
+		#endregion
+
+		#region Steppers
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public override void Stepper(Step<T> step) => _map.Values.ToStepper()(step);
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public override StepStatus Stepper(StepBreak<T> step) => _map.Values.ToStepperBreak()(step);
+
+		#endregion
+
+		#region Overrides
+
+		/// <summary>Prints out a string representation of this matrix.</summary>
+		/// <returns>A string representing this matrix.</returns>
+		public override string ToString() => base.ToString();
+
+		/// <summary>Matrixs a hash code from the values of this matrix.</summary>
+		/// <returns>A hash code for the matrix.</returns>
+		public override int GetHashCode() => _map.GetHashCode() ^ _rows ^ _columns;
+
+		/// <summary>Does an equality check by value.</summary>
+		/// <param name="b">The object to compare to.</param>
+		/// <returns>True if the references are equal, false if not.</returns>
+		public override bool Equals(object b) => b is MatrixSparse<T> B
 			? Equal(this, B)
 			: false;
 

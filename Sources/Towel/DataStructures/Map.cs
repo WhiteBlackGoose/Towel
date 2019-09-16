@@ -60,6 +60,12 @@ namespace Towel.DataStructures
 		/// <summary>Steps through all the pairs.</summary>
 		/// <param name="step">The step function.</param>
 		StepStatus Pairs(StepBreak<T, K> step);
+		/// <summary>Steps through all the keys.</summary>
+		/// <param name="step">The step function.</param>
+		void Stepper(StepRef<T> step);
+		/// <summary>Steps through all the keys.</summary>
+		/// <param name="step">The step function.</param>
+		StepStatus Stepper(StepRefBreak<T> step);
 
 		#endregion
 	}
@@ -405,8 +411,8 @@ namespace Towel.DataStructures
 		#region Stepper And IEnumerable
 
 		/// <summary>Steps through all the keys.</summary>
-		/// <param name="function">The step function.</param>
-		public void Keys(Step<K> function)
+		/// <param name="step">The step function.</param>
+		public void Keys(Step<K> step)
 		{
 			Node node;
 			for (int i = 0; i < _table.Length; i++)
@@ -415,7 +421,7 @@ namespace Towel.DataStructures
 				{
 					do
 					{
-						function(node.Key);
+						step(node.Key);
 					} while ((node = node.Next) != null);
 				}
 			}
@@ -443,8 +449,8 @@ namespace Towel.DataStructures
 		}
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
-		/// <param name="function">The delegate to invoke on each item in the structure.</param>
-		public void Stepper(Step<T> function)
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public void Stepper(Step<T> step)
 		{
 			Node node;
 			for (int i = 0; i < _table.Length; i++)
@@ -453,7 +459,24 @@ namespace Towel.DataStructures
 				{
 					do
 					{
-						function(node.Value);
+						step(node.Value);
+					} while ((node = node.Next) != null);
+				}
+			}
+		}
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public void Stepper(StepRef<T> step)
+		{
+			Node node;
+			for (int i = 0; i < _table.Length; i++)
+			{
+				if ((node = _table[i]) != null)
+				{
+					do
+					{
+						step(ref node.Value);
 					} while ((node = node.Next) != null);
 				}
 			}
@@ -470,6 +493,24 @@ namespace Towel.DataStructures
 					do
 					{
 						if (step(node.Value) == StepStatus.Break)
+						{
+							return StepStatus.Break;
+						}
+					} while ((node = node.Next) != null);
+			return StepStatus.Continue;
+		}
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public StepStatus Stepper(StepRefBreak<T> step)
+		{
+			Node node;
+			for (int i = 0; i < _table.Length; i++)
+				if ((node = _table[i]) != null)
+					do
+					{
+						if (step(ref node.Value) == StepStatus.Break)
 						{
 							return StepStatus.Break;
 						}
@@ -1038,8 +1079,8 @@ namespace Towel.DataStructures
 		}
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
-		/// <param name="function">The delegate to invoke on each item in the structure.</param>
-		public void Stepper(Step<T> function)
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public void Stepper(Step<T> step)
 		{
 			int num = 0;
 			for (int index = 0; index < _lastIndex && num < _count; ++index)
@@ -1047,7 +1088,22 @@ namespace Towel.DataStructures
 				if (_nodes[index].Hash >= 0)
 				{
 					++num;
-					function(_nodes[index].Value);
+					step(_nodes[index].Value);
+				}
+			}
+		}
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		public void Stepper(StepRef<T> step)
+		{
+			int num = 0;
+			for (int index = 0; index < _lastIndex && num < _count; ++index)
+			{
+				if (_nodes[index].Hash >= 0)
+				{
+					++num;
+					step(ref _nodes[index].Value);
 				}
 			}
 		}
@@ -1064,6 +1120,26 @@ namespace Towel.DataStructures
 				{
 					++num;
 					if (step(_nodes[index].Value) == StepStatus.Break)
+					{
+						return StepStatus.Break;
+					}
+				}
+			}
+			return StepStatus.Continue;
+		}
+
+		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
+		/// <param name="step">The delegate to invoke on each item in the structure.</param>
+		/// <returns>The resulting status of the iteration.</returns>
+		public StepStatus Stepper(StepRefBreak<T> step)
+		{
+			int num = 0;
+			for (int index = 0; index < _lastIndex && num < _count; ++index)
+			{
+				if (_nodes[index].Hash >= 0)
+				{
+					++num;
+					if (step(ref _nodes[index].Value) == StepStatus.Break)
 					{
 						return StepStatus.Break;
 					}
