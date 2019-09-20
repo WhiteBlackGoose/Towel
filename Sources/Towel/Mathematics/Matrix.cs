@@ -135,6 +135,17 @@ namespace Towel.Mathematics
 
 		#region Mathematics
 
+		#region TransposeIndex
+
+		internal static int TransposeIndex(int index, int columns)
+		{
+			int column = index % columns;
+			int row = (index - column) / columns;
+			return column * columns + row;
+		}
+
+		#endregion
+
 		#region IsSymetric
 
 		/// <summary>Determines if the matrix is symetric.</summary>
@@ -4471,27 +4482,20 @@ namespace Towel.Mathematics
 					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
 			}
 			ISet<int> set = new SetHashLinked<int>();
-			for ()
-
-			int Length = a._map.Length;
-			T[] A = a._map;
-			T[] B = b._map;
-			T[] C;
-			if (c != null && c._map.Length == Length)
+			a._map.Keys(x => set.TryAdd(x));
+			b._map.Keys(x => set.TryAdd(x));
+			if (c is null || !(c is MatrixSparse<T>))
 			{
-				C = c._map;
-				c._rows = a._rows;
-				c._columns = a._columns;
+				c = new MatrixSparse<T>(a._rows, a._columns);
 			}
 			else
 			{
-				c = new MatrixSparse<T>(a._rows, a._columns, Length);
-				C = c._map;
+				c._map.Clear();
+				c._rows = a._rows;
+				c._columns = a._columns;
 			}
-			for (int i = 0; i < Length; i++)
-			{
-				C[i] = Compute.Add(A[i], B[i]);
-			}
+			IMap<T, int> c_map = c._map;
+			set.Stepper(x => c_map[x] = Compute.Add(a[x], b[x]));
 		}
 
 		/// <summary>Does standard addition of two matrices.</summary>
@@ -4565,25 +4569,21 @@ namespace Towel.Mathematics
 					nameof(a) + "." + nameof(a.Rows) + " == " + nameof(b) + "." + nameof(b.Rows) + " && " +
 					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Columns) + ")");
 			}
-			T[] A = a._map;
-			T[] B = b._map;
-			int Length = A.Length;
-			T[] C;
-			if (c != null && c._map.Length == Length)
+			ISet<int> set = new SetHashLinked<int>();
+			a._map.Keys(x => set.TryAdd(x));
+			b._map.Keys(x => set.TryAdd(x));
+			if (c is null || !(c is MatrixSparse<T>))
 			{
-				C = c._map;
-				c._rows = a._rows;
-				c._columns = a._columns;
+				c = new MatrixSparse<T>(a._rows, a._columns);
 			}
 			else
 			{
-				c = new MatrixSparse<T>(a._rows, a._columns, Length);
-				C = c._map;
+				c._map.Clear();
+				c._rows = a._rows;
+				c._columns = a._columns;
 			}
-			for (int i = 0; i < Length; i++)
-			{
-				C[i] = Compute.Subtract(A[i], B[i]);
-			}
+			IMap<T, int> c_map = c._map;
+			set.Stepper(x => c_map[x] = Compute.Subtract(a[x], b[x]));
 		}
 
 		/// <summary>Does a standard matrix subtraction.</summary>
@@ -4653,40 +4653,38 @@ namespace Towel.Mathematics
 			}
 			if (a._columns != b._rows)
 			{
-				throw new MathematicsException("Arguments invalid !(" +
-					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
+				throw new MathematicsException("!(" + nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Rows) + ")");
 			}
-			if (object.ReferenceEquals(a, b) && object.ReferenceEquals(a, c))
+			if (ReferenceEquals(a, b) && ReferenceEquals(a, c))
 			{
 				MatrixSparse<T> clone = (MatrixSparse<T>)a.Clone();
 				a = clone;
 				b = clone;
 			}
-			else if (object.ReferenceEquals(a, c))
+			else if (ReferenceEquals(a, c))
 			{
 				a = (MatrixSparse<T>)a.Clone();
 			}
-			else if (object.ReferenceEquals(b, c))
+			else if (ReferenceEquals(b, c))
 			{
 				b = (MatrixSparse<T>)b.Clone();
 			}
 			int c_Rows = a._rows;
 			int a_Columns = a._columns;
 			int c_Columns = b._columns;
-			T[] A = a._map;
-			T[] B = b._map;
-			T[] C;
-			if (c != null && c._map.Length == c_Rows * c_Columns)
+			if (c is null || !(c is MatrixSparse<T> c_MatrixSparse))
 			{
-				C = c._map;
-				c._rows = c_Rows;
-				c._columns = c_Columns;
+				c = new MatrixSparse<T>(c_Rows, c_Columns);
 			}
 			else
 			{
-				c = new MatrixSparse<T>(c_Rows, c_Columns);
-				C = c._map;
+				c._map.Clear();
+				c._rows = c_Rows;
+				c._columns = c_Columns;
 			}
+
+			// This code needs to be optimized.
+
 			for (int i = 0; i < c_Rows; i++)
 			{
 				int i_times_a_Columns = i * a_Columns;
@@ -4696,9 +4694,9 @@ namespace Towel.Mathematics
 					T sum = Constant<T>.Zero;
 					for (int k = 0; k < a_Columns; k++)
 					{
-						sum = Compute.MultiplyAddImplementation<T>.Function(A[i_times_a_Columns + k], B[k * c_Columns + j], sum);
+						sum = Compute.MultiplyAddImplementation<T>.Function(a[i_times_a_Columns + k], b[k * c_Columns + j], sum);
 					}
-					C[i_times_c_Columns + j] = sum;
+					c[i_times_c_Columns + j] = sum;
 				}
 			}
 		}
@@ -4775,7 +4773,6 @@ namespace Towel.Mathematics
 				throw new MathematicsException("Arguments invalid !(" +
 					nameof(a) + "." + nameof(a.Columns) + " == " + nameof(b) + "." + nameof(b.Dimensions) + ")");
 			}
-			T[] A = a._map;
 			T[] B = b._vector;
 			T[] C;
 			if (c != null && c.Dimensions == columns)
@@ -4793,7 +4790,7 @@ namespace Towel.Mathematics
 				T sum = Constant<T>.Zero;
 				for (int j = 0; j < columns; j++)
 				{
-					sum = Compute.Add(sum, Compute.Multiply(A[i_times_columns + j], B[j]));
+					sum = Compute.Add(sum, Compute.Multiply(a[i_times_columns + j], B[j]));
 				}
 				C[i] = sum;
 			}
@@ -4843,24 +4840,18 @@ namespace Towel.Mathematics
 			{
 				throw new ArgumentNullException(nameof(a));
 			}
-			T[] A = a._map;
-			int Length = A.Length;
-			T[] C;
-			if (c != null && c._map.Length == Length)
+			if (c is null || !(c is MatrixSparse<T>))
 			{
-				C = c._map;
-				c._rows = a._rows;
-				c._columns = a._columns;
+				c = new MatrixSparse<T>(a._rows, a._columns);
 			}
 			else
 			{
-				c = new MatrixSparse<T>(a._rows, a._columns, Length);
-				C = c._map;
+				c._map.Clear();
+				c._rows = a._rows;
+				c._columns = a._columns;
 			}
-			for (int i = 0; i < Length; i++)
-			{
-				C[i] = Compute.Multiply(A[i], b);
-			}
+			IMap<T, int> c_map = c._map;
+			a._map.Keys(x => c_map[x] = Compute.Multiply(a[x], b));
 		}
 
 		/// <summary>Multiplies all the values in a matrix by a scalar.</summary>
@@ -4941,24 +4932,18 @@ namespace Towel.Mathematics
 			{
 				throw new ArgumentNullException(nameof(a));
 			}
-			T[] A = a._map;
-			int Length = A.Length;
-			T[] C;
-			if (c != null && c._map.Length == Length)
+			if (c is null || !(c is MatrixSparse<T>))
 			{
-				C = c._map;
-				c._rows = a._rows;
-				c._columns = a._columns;
+				c = new MatrixSparse<T>(a._rows, a._columns);
 			}
 			else
 			{
-				c = new MatrixSparse<T>(a._rows, a._columns, Length);
-				C = c._map;
+				c._map.Clear();
+				c._rows = a._rows;
+				c._columns = a._columns;
 			}
-			for (int i = 0; i < Length; i++)
-			{
-				C[i] = Compute.Divide(A[i], b);
-			}
+			IMap<T, int> c_map = c._map;
+			a._map.Keys(x => c_map[x] = Compute.Divide(a[x], b));
 		}
 
 		/// <summary>Divides all the values in the matrix by a scalar.</summary>
@@ -5026,39 +5011,14 @@ namespace Towel.Mathematics
 			}
 			if (b == 0)
 			{
-				if (c != null && c._map.Length == a._map.Length)
-				{
-					c._rows = a._rows;
-					c._columns = a._columns;
-					Format(c, (x, y) => x == y ? Constant<T>.One : Constant<T>.Zero);
-				}
-				else
-				{
-					c = MatrixSparse<T>.FactoryIdentity(a._rows, a._columns);
-				}
+				c = MatrixSparse<T>.FactoryIdentity(a._rows, a._columns);
 				return;
 			}
-			if (c != null && c._map.Length == a._map.Length)
-			{
-				c._rows = a._rows;
-				c._columns = a._columns;
-				T[] A = a._map;
-				T[] C = c._map;
-				for (int i = 0; i < a._map.Length; i++)
-				{
-					C[i] = A[i];
-				}
-			}
-			else
-			{
-				c = (MatrixSparse<T>)a.Clone();
-			}
-			MatrixSparse<T> d = new MatrixSparse<T>(a._rows, a._columns, a._map.Length);
+			c = (MatrixSparse<T>)a.Clone();
 			for (int i = 0; i < b; i++)
 			{
+				MatrixSparse<T> d = null;
 				Multiply(c, a, ref d);
-				MatrixSparse<T> temp = d;
-				d = c;
 				c = d;
 			}
 		}
@@ -5078,10 +5038,7 @@ namespace Towel.Mathematics
 		/// <param name="a">The matrix to be powered by.</param>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <returns>The resulting matrix of the power operation.</returns>
-		public static MatrixSparse<T> operator ^(MatrixSparse<T> a, int b)
-		{
-			return Power(a, b);
-		}
+		public static MatrixSparse<T> operator ^(MatrixSparse<T> a, int b) => Power(a, b);
 
 		/// <summary>Applies a power to a square matrix.</summary>
 		/// <param name="b">The power to apply to the matrix.</param>
@@ -5100,18 +5057,12 @@ namespace Towel.Mathematics
 		/// <summary>Applies a power to a square matrix.</summary>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <param name="c">The resulting matrix of the power operation.</param>
-		public void Power(int b, ref MatrixSparse<T> c)
-		{
-			Power(this, b, ref c);
-		}
+		public void Power(int b, ref MatrixSparse<T> c) => Power(this, b, ref c);
 
 		/// <summary>Applies a power to a square matrix.</summary>
 		/// <param name="b">The power to apply to the matrix.</param>
 		/// <returns>The resulting matrix of the power operation.</returns>
-		public new MatrixSparse<T> Power(int b)
-		{
-			return this ^ b;
-		}
+		public new MatrixSparse<T> Power(int b) => this ^ b;
 
 		#endregion
 
@@ -5203,11 +5154,10 @@ namespace Towel.Mathematics
 			}
 			T trace = Compute.Add((Step<T> step) =>
 			{
-				T[] A = a._map;
 				int rows = a.Rows;
 				for (int i = 0; i < rows; i++)
 				{
-					step(A[i * rows + i]);
+					step(a[i * rows + i]);
 				}
 			});
 			return trace;
@@ -5254,17 +5204,7 @@ namespace Towel.Mathematics
 			int b_rows = a_rows - 1;
 			int b_columns = a_columns - 1;
 			int b_length = b_rows * b_columns;
-			if (b is null || b._map.Length != b_length)
-			{
-				b = new MatrixSparse<T>(b_rows, b_columns, b_length);
-			}
-			else
-			{
-				b._rows = b_rows;
-				b._columns = b_columns;
-			}
-			T[] B = b._map;
-			T[] A = a._map;
+			b = new MatrixSparse<T>(b_rows, b_columns);
 			int m = 0, n = 0;
 			for (int i = 0; i < a_rows; i++)
 			{
@@ -5281,8 +5221,8 @@ namespace Towel.Mathematics
 					{
 						continue;
 					}
-					T temp = A[i_times_a_columns + j];
-					B[m_times_b_columns + n] = temp;
+					T temp = a[i_times_a_columns + j];
+					b[m_times_b_columns + n] = temp;
 					n++;
 				}
 				m++;
@@ -5358,21 +5298,7 @@ namespace Towel.Mathematics
 			int c_rows = a._rows;
 			int c_columns = a._columns + b._columns;
 			int c_length = c_rows * c_columns;
-			if (c is null ||
-				c._map.Length != c_length ||
-				object.ReferenceEquals(a, c) ||
-				object.ReferenceEquals(b, c))
-			{
-				c = new MatrixSparse<T>(c_rows, c_columns, c_length);
-			}
-			else
-			{
-				c._rows = c_rows;
-				c._columns = c_columns;
-			}
-			T[] A = a._map;
-			T[] B = b._map;
-			T[] C = c._map;
+			c = new MatrixSparse<T>(c_rows, c_columns);
 			for (int i = 0; i < c_rows; i++)
 			{
 				int i_times_a_columns = i * a_columns;
@@ -5382,11 +5308,11 @@ namespace Towel.Mathematics
 				{
 					if (j < a_columns)
 					{
-						C[i_times_c_columns + j] = A[i_times_a_columns + j];
+						c[i_times_c_columns + j] = a[i_times_a_columns + j];
 					}
 					else
 					{
-						C[i_times_c_columns + j] = B[i_times_b_columns + j - a_columns];
+						c[i_times_c_columns + j] = b[i_times_b_columns + j - a_columns];
 					}
 				}
 			}
@@ -5456,51 +5382,8 @@ namespace Towel.Mathematics
 			{
 				a = (MatrixSparse<T>)a.Clone();
 			}
-			int Rows = a.Rows;
-			if (b != null && b._map.Length == a._map.Length)
-			{
-				b._rows = Rows;
-				b._columns = a._columns;
-				CloneContents(a, b);
-			}
-			else
-			{
-				b = (MatrixSparse<T>)a.Clone();
-			}
-			for (int i = 0; i < Rows; i++)
-			{
-				if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
-				{
-					for (int j = i + 1; j < Rows; j++)
-					{
-						if (Compute.NotEqual(b.Get(j, i), Constant<T>.Zero))
-						{
-							SwapRows(b, i, j);
-						}
-					}
-				}
-				if (Compute.Equal(b.Get(i, i), Constant<T>.Zero))
-				{
-					continue;
-				}
-				if (Compute.NotEqual(b.Get(i, i), Constant<T>.One))
-				{
-					for (int j = i + 1; j < Rows; j++)
-					{
-						if (Compute.Equal(b.Get(j, i), Constant<T>.One))
-						{
-							SwapRows(b, i, j);
-						}
-					}
-				}
-				T rowMultipier = Compute.Divide(Constant<T>.One, b.Get(i, i));
-				RowMultiplication(b, i, rowMultipier);
-				for (int j = i + 1; j < Rows; j++)
-				{
-					T rowAddend = Compute.Negate(b.Get(j, i));
-					RowAddition(b, j, i, rowAddend);
-				}
-			}
+
+			throw new NotImplementedException();
 		}
 
 		/// <summary>Calculates the echelon of a matrix (aka REF).</summary>
@@ -5547,20 +5430,7 @@ namespace Towel.Mathematics
 			}
 			int Rows = a.Rows;
 			int Columns = a.Columns;
-			if (object.ReferenceEquals(a, b))
-			{
-				b = (MatrixSparse<T>)a.Clone();
-			}
-			else if (b != null && b._map.Length == a._map.Length)
-			{
-				b._rows = Rows;
-				b._columns = a._columns;
-				CloneContents(a, b);
-			}
-			else
-			{
-				b = (MatrixSparse<T>)a.Clone();
-			}
+			b = (MatrixSparse<T>)a.Clone();
 			int lead = 0;
 			for (int r = 0; r < Rows; r++)
 			{
@@ -5726,19 +5596,7 @@ namespace Towel.Mathematics
 			MatrixSparse<T> adjoint = a.Adjoint();
 			int dimension = a.Rows;
 			int Length = a.Length;
-			if (object.ReferenceEquals(a, b))
-			{
-				b = (MatrixSparse<T>)a.Clone();
-			}
-			else if (b != null && b.Length == Length)
-			{
-				b._rows = dimension;
-				b._columns = dimension;
-			}
-			else
-			{
-				b = new MatrixSparse<T>(dimension, dimension, Length);
-			}
+			b = new MatrixSparse<T>(dimension, dimension);
 			for (int i = 0; i < dimension; i++)
 			{
 				for (int j = 0; j < dimension; j++)
@@ -5869,19 +5727,7 @@ namespace Towel.Mathematics
 			}
 			int dimension = a.Rows;
 			int Length = a.Length;
-			if (object.ReferenceEquals(a, b))
-			{
-				b = (MatrixSparse<T>)a.Clone();
-			}
-			else if (b != null && b.Length == Length)
-			{
-				b._rows = dimension;
-				b._columns = dimension;
-			}
-			else
-			{
-				b = new MatrixSparse<T>(dimension, dimension, Length);
-			}
+			b = new MatrixSparse<T>(dimension, dimension);
 
 			if (dimension == 1)
 			{
@@ -5889,7 +5735,7 @@ namespace Towel.Mathematics
 				return;
 			}
 			T sign = Constant<T>.One;
-			MatrixSparse<T> temp = new MatrixSparse<T>(dimension, dimension, Length);
+			MatrixSparse<T> temp = new MatrixSparse<T>(dimension, dimension);
 			for (int i = 0; i < dimension; i++)
 			{
 				for (int j = 0; j < dimension; j++)
@@ -5986,33 +5832,20 @@ namespace Towel.Mathematics
 			{
 				throw new ArgumentNullException(nameof(a));
 			}
-			if (ReferenceEquals(a, b))
+			int Rows = a._rows;
+			int Columns = a._columns;
+			if (b is null || !(b is MatrixSparse<T>))
 			{
-				if (b.IsSquare)
-				{
-					TransposeContents(b);
-					return;
-				}
-			}
-			int Length = a.Length;
-			int Rows = a.Columns;
-			int Columns = a.Rows;
-			if (b != null && b.Length == a.Length && !ReferenceEquals(a, b))
-			{
-				b._rows = Rows;
-				b._columns = Columns;
+				b = new MatrixSparse<T>(Rows, a._columns);
 			}
 			else
 			{
-				b = new MatrixSparse<T>(Rows, Columns, Length);
+				b._map.Clear();
+				b._rows = Rows;
+				b._columns = Columns;
 			}
-			for (int i = 0; i < Rows; i++)
-			{
-				for (int j = 0; j < Columns; j++)
-				{
-					b.Set(i, j, a.Get(j, i));
-				}
-			}
+			IMap<T, int> b_map = b._map;
+			a._map.Keys(x => b_map[TransposeIndex(x, Columns)] = a[x]);
 		}
 
 		/// <summary>Returns the transpose of a matrix.</summary>
@@ -6208,99 +6041,7 @@ namespace Towel.Mathematics
 				throw new MathematicsException("Argument invalid !(" + nameof(matrix) + "." + nameof(matrix.Rows) + " == 4 && " + nameof(matrix) + "." + nameof(matrix.Columns) + " == 4)");
 			}
 
-			// if the angle is zero, no rotation is required
-			if (Compute.Equal(angle._measurement, Constant<T>.Zero))
-			{
-				return (MatrixSparse<T>)matrix.Clone();
-			}
-
-			T cosine = Compute.CosineSystem(angle);
-			T sine = Compute.SineSystem(angle);
-			T oneMinusCosine = Compute.Subtract(Constant<T>.One, cosine);
-			T xy = Compute.Multiply(axis.X, axis.Y);
-			T yz = Compute.Multiply(axis.Y, axis.Z);
-			T xz = Compute.Multiply(axis.X, axis.Z);
-			T xs = Compute.Multiply(axis.X, sine);
-			T ys = Compute.Multiply(axis.Y, sine);
-			T zs = Compute.Multiply(axis.Z, sine);
-
-			T f00 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.X, axis.X), oneMinusCosine), cosine);
-			T f01 = Compute.Add(Compute.Multiply(xy, oneMinusCosine), zs);
-			T f02 = Compute.Subtract(Compute.Multiply(xz, oneMinusCosine), ys);
-			// n[3] not used
-			T f10 = Compute.Subtract(Compute.Multiply(xy, oneMinusCosine), zs);
-			T f11 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.Y, axis.Y), oneMinusCosine), cosine);
-			T f12 = Compute.Add(Compute.Multiply(yz, oneMinusCosine), xs);
-			// n[7] not used
-			T f20 = Compute.Add(Compute.Multiply(xz, oneMinusCosine), ys);
-			T f21 = Compute.Subtract(Compute.Multiply(yz, oneMinusCosine), xs);
-			T f22 = Compute.Add(Compute.Multiply(Compute.Multiply(axis.Z, axis.Z), oneMinusCosine), cosine);
-
-			// Row 1
-			T _0_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f00), Compute.Multiply(matrix[1, 0], f01)), Compute.Multiply(matrix[2, 0], f02));
-			T _0_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f00), Compute.Multiply(matrix[1, 1], f01)), Compute.Multiply(matrix[2, 1], f02));
-			T _0_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f00), Compute.Multiply(matrix[1, 2], f01)), Compute.Multiply(matrix[2, 2], f02));
-			T _0_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f00), Compute.Multiply(matrix[1, 3], f01)), Compute.Multiply(matrix[2, 3], f02));
-			// Row 2
-			T _1_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f10), Compute.Multiply(matrix[1, 0], f11)), Compute.Multiply(matrix[2, 0], f12));
-			T _1_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f10), Compute.Multiply(matrix[1, 1], f11)), Compute.Multiply(matrix[2, 1], f12));
-			T _1_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f10), Compute.Multiply(matrix[1, 2], f11)), Compute.Multiply(matrix[2, 2], f12));
-			T _1_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f10), Compute.Multiply(matrix[1, 3], f11)), Compute.Multiply(matrix[2, 3], f12));
-			// Row 3
-			T _2_0 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 0], f20), Compute.Multiply(matrix[1, 0], f21)), Compute.Multiply(matrix[2, 0], f22));
-			T _2_1 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 1], f20), Compute.Multiply(matrix[1, 1], f21)), Compute.Multiply(matrix[2, 1], f22));
-			T _2_2 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 2], f20), Compute.Multiply(matrix[1, 2], f21)), Compute.Multiply(matrix[2, 2], f22));
-			T _2_3 = Compute.Add(Compute.Add(Compute.Multiply(matrix[0, 3], f20), Compute.Multiply(matrix[1, 3], f21)), Compute.Multiply(matrix[2, 3], f22));
-			// Row 4
-			T _3_0 = Constant<T>.Zero;
-			T _3_1 = Constant<T>.Zero;
-			T _3_2 = Constant<T>.Zero;
-			T _3_3 = Constant<T>.One;
-
-			return new MatrixSparse<T>(4, 4, (row, column) =>
-			{
-				switch (row)
-				{
-					case 0:
-						switch (column)
-						{
-							case 0: return _0_0;
-							case 1: return _0_1;
-							case 2: return _0_2;
-							case 3: return _0_3;
-							default: throw new MathematicsException("BUG");
-						}
-					case 1:
-						switch (column)
-						{
-							case 0: return _1_0;
-							case 1: return _1_1;
-							case 2: return _1_2;
-							case 3: return _1_3;
-							default: throw new MathematicsException("BUG");
-						}
-					case 2:
-						switch (column)
-						{
-							case 0: return _2_0;
-							case 1: return _2_1;
-							case 2: return _2_2;
-							case 3: return _2_3;
-							default: throw new MathematicsException("BUG");
-						}
-					case 3:
-						switch (column)
-						{
-							case 0: return _3_0;
-							case 1: return _3_1;
-							case 2: return _3_2;
-							case 3: return _3_3;
-							default: throw new MathematicsException("BUG");
-						}
-					default:
-						throw new MathematicsException("BUG");
-				}
-			});
+			throw new NotImplementedException();
 		}
 
 		public override void Rotate4x4(Angle<T> angle, Vector<T> axis, ref Matrix<T> b)
@@ -6349,17 +6090,23 @@ namespace Towel.Mathematics
 			{
 				return false;
 			}
-			T[] A = a._map;
-			T[] B = b._map;
-			int Length = A.Length;
-			for (int i = 0; i < Length; i++)
+			if (Compute.Equal(a._uniform, b._uniform) &&
+				a._map.Count != b._map.Count)
 			{
-				if (!Compute.Equal(A[i], B[i]))
-				{
-					return false;
-				}
+				return false;
 			}
-			return true;
+			if (!Compute.Equal(a._uniform, b._uniform) &&
+				a._map.Count != Rows * Columns ||
+				b._map.Count != Rows * Columns)
+			{
+				return false;
+			}
+			bool equal = true;
+			a._map.Keys(key =>
+				equal = !Compute.Equal(a[key], b[key])
+				? false
+				: equal);
+			return equal;
 		}
 
 		/// <summary>Does a value equality check.</summary>
@@ -6435,17 +6182,23 @@ namespace Towel.Mathematics
 			{
 				return false;
 			}
-			T[] A = a._map;
-			T[] B = b._map;
-			int Length = A.Length;
-			for (int i = 0; i < Length; i++)
+			if (Compute.EqualLeniency(a._uniform, b._uniform, leniency) &&
+				a._map.Count != b._map.Count)
 			{
-				if (!Compute.EqualLeniency(A[i], B[i], leniency))
-				{
-					return false;
-				}
+				return false;
 			}
-			return true;
+			if (!Compute.EqualLeniency(a._uniform, b._uniform, leniency) &&
+				a._map.Count != Rows * Columns ||
+				b._map.Count != Rows * Columns)
+			{
+				return false;
+			}
+			bool equal = true;
+			a._map.Keys(key =>
+				equal = !Compute.EqualLeniency(a[key], b[key], leniency)
+				? false
+				: equal);
+			return equal;
 		}
 
 		/// <summary>Does a value equality check with leniency.</summary>
@@ -6532,30 +6285,9 @@ namespace Towel.Mathematics
 		{
 			b._map.Clear();
 			b._uniform = a._uniform;
-			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in a._map)
-			{
-				b._map.Add(pair.Key, pair.Value);
-			}
-		}
-
-		#endregion
-
-		#region TransposeContents
-
-		internal static void TransposeContents(MatrixSparse<T> a)
-		{
-			System.Collections.Generic.Dictionary<int, T> matrix = new System.Collections.Generic.Dictionary<int, T>();
-			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in a._map)
-			{
-				int column = pair.Key % a.Columns;
-				int row = (pair.Key - column) / a.Columns;
-				matrix.Add(row * a.Columns + column, pair.Value);
-			}
-			a._map.Clear();
-			foreach (System.Collections.Generic.KeyValuePair<int, T> pair in matrix)
-			{
-				a._map.Add(pair.Key, pair.Value);
-			}
+			b._rows = a._rows;
+			b._columns = a._columns;
+			a._map.Keys(key => b[key] = a[key]);
 		}
 
 		#endregion
@@ -6627,12 +6359,12 @@ namespace Towel.Mathematics
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
-		public override void Stepper(Step<T> step) => _map.Values.ToStepper()(step);
+		public override void Stepper(Step<T> step) => _map.Stepper(step);
 
 		/// <summary>Invokes a delegate for each entry in the data structure.</summary>
 		/// <param name="step">The delegate to invoke on each item in the structure.</param>
 		/// <returns>The resulting status of the iteration.</returns>
-		public override StepStatus Stepper(StepBreak<T> step) => _map.Values.ToStepperBreak()(step);
+		public override StepStatus Stepper(StepBreak<T> step) => _map.Stepper(step);
 
 		#endregion
 

@@ -3459,6 +3459,14 @@
             <summary>Steps through all the pairs.</summary>
             <param name="step">The step function.</param>
         </member>
+        <member name="M:Towel.DataStructures.IMap`2.Stepper(Towel.StepRef{`0})">
+            <summary>Steps through all the keys.</summary>
+            <param name="step">The step function.</param>
+        </member>
+        <member name="M:Towel.DataStructures.IMap`2.Stepper(Towel.StepRefBreak{`0})">
+            <summary>Steps through all the keys.</summary>
+            <param name="step">The step function.</param>
+        </member>
         <member name="T:Towel.DataStructures.Map">
             <summary>Static Extension class for Map interface implementers.</summary>
         </member>
@@ -3553,7 +3561,7 @@
         </member>
         <member name="M:Towel.DataStructures.MapHashLinked`2.Keys(Towel.Step{`1})">
             <summary>Steps through all the keys.</summary>
-            <param name="function">The step function.</param>
+            <param name="step">The step function.</param>
         </member>
         <member name="M:Towel.DataStructures.MapHashLinked`2.Keys(Towel.StepBreak{`1})">
             <summary>Steps through all the keys.</summary>
@@ -3561,9 +3569,18 @@
         </member>
         <member name="M:Towel.DataStructures.MapHashLinked`2.Stepper(Towel.Step{`0})">
             <summary>Invokes a delegate for each entry in the data structure.</summary>
-            <param name="function">The delegate to invoke on each item in the structure.</param>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+        </member>
+        <member name="M:Towel.DataStructures.MapHashLinked`2.Stepper(Towel.StepRef{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
         </member>
         <member name="M:Towel.DataStructures.MapHashLinked`2.Stepper(Towel.StepBreak{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+            <returns>The resulting status of the iteration.</returns>
+        </member>
+        <member name="M:Towel.DataStructures.MapHashLinked`2.Stepper(Towel.StepRefBreak{`0})">
             <summary>Invokes a delegate for each entry in the data structure.</summary>
             <param name="step">The delegate to invoke on each item in the structure.</param>
             <returns>The resulting status of the iteration.</returns>
@@ -3688,9 +3705,18 @@
         </member>
         <member name="M:Towel.DataStructures.MapHashArray`2.Stepper(Towel.Step{`0})">
             <summary>Invokes a delegate for each entry in the data structure.</summary>
-            <param name="function">The delegate to invoke on each item in the structure.</param>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+        </member>
+        <member name="M:Towel.DataStructures.MapHashArray`2.Stepper(Towel.StepRef{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
         </member>
         <member name="M:Towel.DataStructures.MapHashArray`2.Stepper(Towel.StepBreak{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+            <returns>The resulting status of the iteration.</returns>
+        </member>
+        <member name="M:Towel.DataStructures.MapHashArray`2.Stepper(Towel.StepRefBreak{`0})">
             <summary>Invokes a delegate for each entry in the data structure.</summary>
             <param name="step">The delegate to invoke on each item in the structure.</param>
             <returns>The resulting status of the iteration.</returns>
@@ -17741,16 +17767,7 @@
             <summary>Invokes a delegate for each entry in the data structure.</summary>
             <param name="step">The delegate to invoke on each item in the structure.</param>
         </member>
-        <member name="M:Towel.Mathematics.Matrix`1.Stepper(Towel.StepRef{`0})">
-            <summary>Invokes a delegate for each entry in the data structure.</summary>
-            <param name="step">The delegate to invoke on each item in the structure.</param>
-        </member>
         <member name="M:Towel.Mathematics.Matrix`1.Stepper(Towel.StepBreak{`0})">
-            <summary>Invokes a delegate for each entry in the data structure.</summary>
-            <param name="step">The delegate to invoke on each item in the structure.</param>
-            <returns>The resulting status of the iteration.</returns>
-        </member>
-        <member name="M:Towel.Mathematics.Matrix`1.Stepper(Towel.StepRefBreak{`0})">
             <summary>Invokes a delegate for each entry in the data structure.</summary>
             <param name="step">The delegate to invoke on each item in the structure.</param>
             <returns>The resulting status of the iteration.</returns>
@@ -18460,6 +18477,678 @@
             <returns>A hash code for the matrix.</returns>
         </member>
         <member name="M:Towel.Mathematics.MatrixDense`1.Equals(System.Object)">
+            <summary>Does an equality check by value.</summary>
+            <param name="b">The object to compare to.</param>
+            <returns>True if the references are equal, false if not.</returns>
+        </member>
+        <member name="T:Towel.Mathematics.MatrixSparse`1">
+            <summary>A matrix of arbitrary dimensions implemented as a flattened array.</summary>
+            <typeparam name="T">The numeric type of this Matrix.</typeparam>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Rows">
+            <summary>The number of rows in the matrix.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Columns">
+            <summary>The number of columns in the matrix.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.IsSquare">
+            <summary>Determines if the matrix is square.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.IsVector">
+            <summary>Determines if the matrix is a vector.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is2x1">
+            <summary>Determines if the matrix is a 2 component vector.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is3x1">
+            <summary>Determines if the matrix is a 3 component vector.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is4x1">
+            <summary>Determines if the matrix is a 4 component vector.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is2x2">
+            <summary>Determines if the matrix is a 2 square matrix.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is3x3">
+            <summary>Determines if the matrix is a 3 square matrix.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Is4x4">
+            <summary>Determines if the matrix is a 4 square matrix.</summary>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Item(System.Int32,System.Int32)">
+            <summary>Standard row-major matrix indexing.</summary>
+            <param name="row">The row index.</param>
+            <param name="column">The column index.</param>
+            <returns>The value at the given indeces.</returns>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.Item(System.Int32)">
+            <summary>Indexing of the flattened array representing the matrix.</summary>
+            <param name="flatIndex">The flattened index of the matrix.</param>
+            <returns>The value at the given flattened index.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.#ctor(System.Int32,System.Int32,`0)">
+            <summary>Constructs a new default matrix of the given dimensions.</summary>
+            <param name="rows">The number of row dimensions.</param>
+            <param name="columns">The number of column dimensions.</param>
+            <param name="uniform">The default value if one has not been assigned.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.#ctor(System.Int32,System.Int32)">
+            <summary>Constructs a new default matrix of the given dimensions.</summary>
+            <param name="rows">The number of row dimensions.</param>
+            <param name="columns">The number of column dimensions.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.FactoryZero(System.Int32,System.Int32)">
+            <summary>Constructs a new zero-matrix of the given dimensions.</summary>
+            <param name="rows">The number of rows of the matrix.</param>
+            <param name="columns">The number of columns of the matrix.</param>
+            <returns>The newly constructed zero-matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.FactoryIdentity(System.Int32,System.Int32)">
+            <summary>Constructs a new identity-matrix of the given dimensions.</summary>
+            <param name="rows">The number of rows of the matrix.</param>
+            <param name="columns">The number of columns of the matrix.</param>
+            <returns>The newly constructed identity-matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.FactoryUniform(System.Int32,System.Int32,`0)">
+            <summary>Constructs a new matrix where every entry is the same uniform value.</summary>
+            <param name="rows">The number of rows of the matrix.</param>
+            <param name="columns">The number of columns of the matrix.</param>
+            <param name="value">The value to assign every spot in the matrix.</param>
+            <returns>The newly constructed matrix filled with the uniform value.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.GetIsSymetric(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Determines if the matrix is symetric.</summary>
+            <param name="a">The matrix to determine if symetric.</param>
+            <returns>True if the matrix is symetric; false if not.</returns>
+        </member>
+        <member name="P:Towel.Mathematics.MatrixSparse`1.IsSymetric">
+            <summary>Determines if the matrix is symetric.</summary>
+            <returns>True if the matrix is symetric; false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Negate(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Negates all the values in a matrix.</summary>
+            <param name="a">The matrix to have its values negated.</param>
+            <param name="b">The resulting matrix after the negation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Negate(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Negates all the values in a matrix.</summary>
+            <param name="a">The matrix to have its values negated.</param>
+            <returns>The resulting matrix after the negation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_UnaryNegation(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Negates all the values in a matrix.</summary>
+            <param name="a">The matrix to have its values negated.</param>
+            <returns>The resulting matrix after the negation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Negate(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Negates all the values in a matrix.</summary>
+            <param name="b">The resulting matrix after the negation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Negate(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Negates all the values in a matrix.</summary>
+            <param name="b">The resulting matrix after the negation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Negate">
+            <summary>Negates all the values in this matrix.</summary>
+            <returns>The resulting matrix after the negation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Add(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does standard addition of two matrices.</summary>
+            <param name="a">The left matrix of the addition.</param>
+            <param name="b">The right matrix of the addition.</param>
+            <param name="c">The resulting matrix after the addition.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Add(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does standard addition of two matrices.</summary>
+            <param name="a">The left matrix of the addition.</param>
+            <param name="b">The right matrix of the addition.</param>
+            <returns>The resulting matrix after the addition.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Addition(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard matrix addition.</summary>
+            <param name="a">The left matrix of the addition.</param>
+            <param name="b">The right matrix of the addition.</param>
+            <returns>The resulting matrix after teh addition.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Add(Towel.Mathematics.Matrix{`0},Towel.Mathematics.Matrix{`0}@)">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="b">The right matrix of the subtraction.</param>
+            <param name="c">The resulting matrix after the subtraction.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Add(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does standard addition of two matrices.</summary>
+            <param name="b">The right matrix of the addition.</param>
+            <param name="c">The resulting matrix after the addition.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Add(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard matrix addition.</summary>
+            <param name="b">The matrix to add to this matrix.</param>
+            <returns>The resulting matrix after the addition.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Subtract(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="a">The left matrix of the subtraction.</param>
+            <param name="b">The right matrix of the subtraction.</param>
+            <param name="c">The resulting matrix after the subtraction.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Subtract(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="a">The left matrix of the subtraction.</param>
+            <param name="b">The right matrix of the subtraction.</param>
+            <returns>The resulting matrix after the subtraction.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Subtraction(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="a">The left matrix of the subtraction.</param>
+            <param name="b">The right matrix of the subtraction.</param>
+            <returns>The resulting matrix after the subtraction.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Subtract(Towel.Mathematics.Matrix{`0},Towel.Mathematics.Matrix{`0}@)">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="b">The right matrix of the subtraction.</param>
+            <param name="c">The resulting matrix after the subtraction.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Subtract(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="b">The right matrix of the subtraction.</param>
+            <param name="c">The resulting matrix after the subtraction.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Subtract(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard matrix subtraction.</summary>
+            <param name="b">The right matrix of the subtraction.</param>
+            <returns>The resulting matrix after the subtraction.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right matrix of the multiplication.</param>
+            <param name="c">The resulting matrix of the multiplication.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right matrix of the multiplication.</param>
+            <returns>The resulting matrix of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right matrix of the multiplication.</param>
+            <returns>The resulting matrix of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.Matrix{`0},Towel.Mathematics.Matrix{`0}@)">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="b">The right matrix of the multiplication.</param>
+            <param name="c">The resulting matrix of the multiplication.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="b">The right matrix of the multiplication.</param>
+            <param name="c">The resulting matrix of the multiplication.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a standard (triple for looped) multiplication between matrices.</summary>
+            <param name="b">The right matrix of the multiplication.</param>
+            <returns>The resulting matrix of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.Vector{`0},Towel.Mathematics.Vector{`0}@)">
+            <summary>Does a matrix-vector multiplication.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right vector of the multiplication.</param>
+            <param name="c">The resulting vector of the multiplication.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.Vector{`0})">
+            <summary>Does a matrix-vector multiplication.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right vector of the multiplication.</param>
+            <returns>The resulting vector of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Multiply(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.Vector{`0})">
+            <summary>Does a matrix-vector multiplication.</summary>
+            <param name="a">The left matrix of the multiplication.</param>
+            <param name="b">The right vector of the multiplication.</param>
+            <returns>The resulting vector of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.Vector{`0},Towel.Mathematics.Vector{`0}@)">
+            <summary>Does a matrix-vector multiplication.</summary>
+            <param name="b">The right vector of the multiplication.</param>
+            <param name="c">The resulting vector of the multiplication.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.Vector{`0})">
+            <summary>Does a matrix-vector multiplication.</summary>
+            <param name="b">The right vector of the multiplication.</param>
+            <returns>The resulting vector of the multiplication.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},`0,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="a">The matrix to have the values multiplied.</param>
+            <param name="b">The scalar to multiply the values by.</param>
+            <param name="c">The resulting matrix after the multiplications.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="a">The matrix to have the values multiplied.</param>
+            <param name="b">The scalar to multiply the values by.</param>
+            <returns>The resulting matrix after the multiplications.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(`0,Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="b">The scalar to multiply the values by.</param>
+            <param name="a">The matrix to have the values multiplied.</param>
+            <returns>The resulting matrix after the multiplications.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Multiply(Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="a">The matrix to have the values multiplied.</param>
+            <param name="b">The scalar to multiply the values by.</param>
+            <returns>The resulting matrix after the multiplications.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Multiply(`0,Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="b">The scalar to multiply the values by.</param>
+            <param name="a">The matrix to have the values multiplied.</param>
+            <returns>The resulting matrix after the multiplications.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(`0,Towel.Mathematics.Matrix{`0}@)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="b">The scalar to multiply the values by.</param>
+            <param name="c">The resulting matrix after the multiplications.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(`0,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="b">The scalar to multiply the values by.</param>
+            <param name="c">The resulting matrix after the multiplications.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Multiply(`0)">
+            <summary>Multiplies all the values in a matrix by a scalar.</summary>
+            <param name="b">The scalar to multiply the values by.</param>
+            <returns>The resulting matrix after the multiplications.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Divide(Towel.Mathematics.MatrixSparse{`0},`0,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="a">The matrix to divide the values of.</param>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <param name="c">The resulting matrix after the division.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Divide(Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="a">The matrix to divide the values of.</param>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <returns>The resulting matrix after the division.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Division(Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="a">The matrix to divide the values of.</param>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <returns>The resulting matrix after the division.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Divide(`0,Towel.Mathematics.Matrix{`0}@)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <param name="c">The resulting matrix after the division.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Divide(`0,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <param name="c">The resulting matrix after the division.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Divide(`0)">
+            <summary>Divides all the values in the matrix by a scalar.</summary>
+            <param name="b">The scalar to divide all the matrix values by.</param>
+            <returns>The resulting matrix after the division.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Power(Towel.Mathematics.MatrixSparse{`0},System.Int32,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="a">The matrix to be powered by.</param>
+            <param name="b">The power to apply to the matrix.</param>
+            <param name="c">The resulting matrix of the power operation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Power(Towel.Mathematics.MatrixSparse{`0},System.Int32)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="a">The matrix to be powered by.</param>
+            <param name="b">The power to apply to the matrix.</param>
+            <returns>The resulting matrix of the power operation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_ExclusiveOr(Towel.Mathematics.MatrixSparse{`0},System.Int32)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="a">The matrix to be powered by.</param>
+            <param name="b">The power to apply to the matrix.</param>
+            <returns>The resulting matrix of the power operation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Power(System.Int32,Towel.Mathematics.Matrix{`0}@)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="b">The power to apply to the matrix.</param>
+            <param name="c">The resulting matrix of the power operation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Power(System.Int32,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="b">The power to apply to the matrix.</param>
+            <param name="c">The resulting matrix of the power operation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Power(System.Int32)">
+            <summary>Applies a power to a square matrix.</summary>
+            <param name="b">The power to apply to the matrix.</param>
+            <returns>The resulting matrix of the power operation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Determinent(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Computes the determinent of a square matrix.</summary>
+            <param name="a">The matrix to compute the determinent of.</param>
+            <returns>The computed determinent.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Determinent">
+            <summary>Computes the determinent of a square matrix.</summary>
+            <returns>The computed determinent.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Trace(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Computes the trace of a square matrix.</summary>
+            <param name="a">The matrix to compute the trace of.</param>
+            <returns>The computed trace.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Trace">
+            <summary>Computes the trace of a square matrix.</summary>
+            <returns>The computed trace.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Minor(Towel.Mathematics.MatrixSparse{`0},System.Int32,System.Int32,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Gets the minor of a matrix.</summary>
+            <param name="a">The matrix to get the minor of.</param>
+            <param name="row">The restricted row to form the minor.</param>
+            <param name="column">The restricted column to form the minor.</param>
+            <param name="b">The minor of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Minor(Towel.Mathematics.MatrixSparse{`0},System.Int32,System.Int32)">
+            <summary>Gets the minor of a matrix.</summary>
+            <param name="a">The matrix to get the minor of.</param>
+            <param name="row">The restricted row to form the minor.</param>
+            <param name="column">The restricted column to form the minor.</param>
+            <returns>The minor of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Minor(System.Int32,System.Int32,Towel.Mathematics.Matrix{`0}@)">
+            <summary>Gets the minor of a matrix.</summary>
+            <param name="row">The restricted row to form the minor.</param>
+            <param name="column">The restricted column to form the minor.</param>
+            <param name="b">The minor of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Minor(System.Int32,System.Int32,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Gets the minor of a matrix.</summary>
+            <param name="row">The restricted row to form the minor.</param>
+            <param name="column">The restricted column to form the minor.</param>
+            <param name="b">The minor of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Minor(System.Int32,System.Int32)">
+            <summary>Gets the minor of a matrix.</summary>
+            <param name="row">The restricted row to form the minor.</param>
+            <param name="column">The restricted column to form the minor.</param>
+            <returns>The minor of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ConcatenateRowWise(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Combines two matrices from left to right 
+            (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+            <param name="a">The left matrix of the concatenation.</param>
+            <param name="b">The right matrix of the concatenation.</param>
+            <param name="c">The resulting matrix of the concatenation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ConcatenateRowWise(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Combines two matrices from left to right 
+            (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+            <param name="a">The left matrix of the concatenation.</param>
+            <param name="b">The right matrix of the concatenation.</param>
+            <returns>The resulting matrix of the concatenation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ConcatenateRowWise(Towel.Mathematics.Matrix{`0},Towel.Mathematics.Matrix{`0}@)">
+            <summary>Combines two matrices from left to right 
+            (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+            <param name="b">The right matrix of the concatenation.</param>
+            <param name="c">The resulting matrix of the concatenation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ConcatenateRowWise(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Combines two matrices from left to right 
+            (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+            <param name="b">The right matrix of the concatenation.</param>
+            <param name="c">The resulting matrix of the concatenation.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ConcatenateRowWise(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Combines two matrices from left to right 
+            (result.Rows = left.Rows AND result.Columns = left.Columns + right.Columns).</summary>
+            <param name="b">The right matrix of the concatenation.</param>
+            <returns>The resulting matrix of the concatenation.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Echelon(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the echelon of a matrix (aka REF).</summary>
+            <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+            <param name="b">The echelon of the matrix (aka REF).</param>
+            <bug>Failing for non-floating point rational types due to zero how values are being compared.</bug>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Echelon(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Calculates the echelon of a matrix (aka REF).</summary>
+            <param name="a">The matrix to calculate the echelon of (aka REF).</param>
+            <returns>The echelon of the matrix (aka REF).</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Echelon(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Calculates the echelon of a matrix (aka REF).</summary>
+            <param name="b">The echelon of the matrix (aka REF).</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Echelon(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the echelon of a matrix (aka REF).</summary>
+            <param name="b">The echelon of the matrix (aka REF).</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Echelon">
+            <summary>Calculates the echelon of a matrix (aka REF).</summary>
+            <returns>The echelon of the matrix (aka REF).</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ReducedEchelon(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+            <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+            <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ReducedEchelon(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+            <param name="a">The matrix matrix to calculate the reduced echelon of (aka RREF).</param>
+            <returns>The reduced echelon of the matrix (aka RREF).</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ReducedEchelon(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+            <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ReducedEchelon(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the echelon of a matrix and reduces it (aka RREF).</summary>
+            <param name="b">The reduced echelon of the matrix (aka RREF).</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ReducedEchelon">
+            <summary>Matrixs the reduced echelon form of this matrix (aka RREF).</summary>
+            <returns>The computed reduced echelon form of this matrix (aka RREF).</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Inverse(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the inverse of a matrix.</summary>
+            <param name="a">The matrix to calculate the inverse of.</param>
+            <param name="b">The inverse of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Inverse(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Calculates the inverse of a matrix.</summary>
+            <param name="a">The matrix to calculate the inverse of.</param>
+            <returns>The inverse of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Inverse(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Matrixs the inverse of this matrix.</summary>
+            <returns>The inverse of this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Inverse(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Matrixs the inverse of this matrix.</summary>
+            <returns>The inverse of this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Inverse">
+            <summary>Matrixs the inverse of this matrix.</summary>
+            <returns>The inverse of this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Adjoint(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the adjoint of a matrix.</summary>
+            <param name="a">The matrix to calculate the adjoint of.</param>
+            <param name="b">The adjoint of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Adjoint(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Calculates the adjoint of a matrix.</summary>
+            <param name="a">The matrix to calculate the adjoint of.</param>
+            <returns>The adjoint of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Adjoint(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Calculates the adjoint of a matrix.</summary>
+            <param name="b">The adjoint of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Adjoint(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Calculates the adjoint of a matrix.</summary>
+            <param name="b">The adjoint of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Adjoint">
+            <summary>Calculates the adjoint of a matrix.</summary>
+            <returns>The adjoint of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Transpose(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Returns the transpose of a matrix.</summary>
+            <param name="a">The matrix to transpose.</param>
+            <param name="b">The transpose of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Transpose(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Returns the transpose of a matrix.</summary>
+            <param name="a">The matrix to transpose.</param>
+            <returns>The transpose of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Transpose(Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Returns the transpose of a matrix.</summary>
+            <param name="b">The transpose of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Transpose(Towel.Mathematics.Matrix{`0}@)">
+            <summary>Returns the transpose of a matrix.</summary>
+            <param name="b">The transpose of the matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Transpose">
+            <summary>Returns the transpose of a matrix.</summary>
+            <returns>The transpose of the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.DecomposeLowerUpper(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0}@,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+            <param name="matrix">The matrix to decompose.</param>
+            <param name="lower">The computed lower triangular matrix.</param>
+            <param name="upper">The computed upper triangular matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.DecomposeLowerUpper(Towel.Mathematics.MatrixSparse{`0}@,Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+            <param name="lower">The computed lower triangular matrix.</param>
+            <param name="upper">The computed upper triangular matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.DecomposeLowerUpper(Towel.Mathematics.Matrix{`0}@,Towel.Mathematics.Matrix{`0}@)">
+            <summary>Decomposes a matrix into lower-upper reptresentation.</summary>
+            <param name="lower">The computed lower triangular matrix.</param>
+            <param name="upper">The computed upper triangular matrix.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Rotate4x4(Towel.Mathematics.MatrixSparse{`0},Towel.Measurements.Angle{`0},Towel.Mathematics.Vector{`0},Towel.Mathematics.MatrixSparse{`0}@)">
+            <summary>Rotates a 4x4 matrix around an 3D axis by a specified angle.</summary>
+            /// <param name="matrix">The 4x4 matrix to rotate.</param>
+            <param name="angle">The angle of rotation around the axis.</param>
+            <param name="axis">The 3D axis to rotate the matrix around.</param>
+            <returns>The rotated matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Rotate4x4(Towel.Mathematics.MatrixSparse{`0},Towel.Measurements.Angle{`0},Towel.Mathematics.Vector{`0})">
+            <summary>Rotates a 4x4 matrix around an 3D axis by a specified angle.</summary>
+            /// <param name="matrix">The 4x4 matrix to rotate.</param>
+            <param name="angle">The angle of rotation around the axis.</param>
+            <param name="axis">The 3D axis to rotate the matrix around.</param>
+            <returns>The rotated matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equal(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a value equality check.</summary>
+            <param name="a">The first matrix to check for equality.</param>
+            <param name="b">The second matrix to check for equality.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Equality(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a value equality check.</summary>
+            <param name="a">The first matrix to check for equality.</param>
+            <param name="b">The second matrix to check for equality.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Inequality(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a value non-equality check.</summary>
+            <param name="a">The first matrix to check for non-equality.</param>
+            <param name="b">The second matrix to check for non-equality.</param>
+            <returns>True if values are not equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equal(Towel.Mathematics.Matrix{`0})">
+            <summary>Does a value equality check.</summary>
+            <param name="b">The second matrix to check for equality.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equal(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Does a value equality check.</summary>
+            <param name="b">The second matrix to check for equality.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equal(Towel.Mathematics.MatrixSparse{`0},Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Does a value equality check with leniency.</summary>
+            <param name="a">The first matrix to check for equality.</param>
+            <param name="b">The second matrix to check for equality.</param>
+            <param name="leniency">How much the values can vary but still be considered equal.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equal(Towel.Mathematics.MatrixSparse{`0},`0)">
+            <summary>Does a value equality check with leniency.</summary>
+            <param name="b">The second matrix to check for equality.</param>
+            <param name="leniency">How much the values can vary but still be considered equal.</param>
+            <returns>True if values are equal, false if not.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Format(Towel.Mathematics.MatrixSparse{`0},System.Func{System.Int32,System.Int32,`0})">
+            <summary>Fills a matrix with values using a delegate.</summary>
+            <param name="matrix">The matrix to fill the values of.</param>
+            <param name="func">The function to set the values at the relative indeces.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Format(System.Func{System.Int32,System.Int32,`0})">
+            <summary>Fills a matrix with values using a delegate.</summary>
+            <param name="func">The function to set the values at the relative indeces.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Format(Towel.Mathematics.MatrixSparse{`0},System.Func{System.Int32,`0})">
+            <summary>Fills a matrix with values using a delegate.</summary>
+            <param name="matrix">The matrix to fill the values of.</param>
+            <param name="func">The function to set the values at the relative indeces.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Format(System.Func{System.Int32,`0})">
+            <summary>Fills a matrix with values using a delegate.</summary>
+            <param name="func">The function to set the values at the relative indeces.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Clone(Towel.Mathematics.MatrixSparse{`0})">
+            <summary>Creates a copy of a matrix.</summary>
+            <param name="a">The matrix to copy.</param>
+            <returns>The copy of this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Clone">
+            <summary>Copies this matrix.</summary>
+            <returns>The copy of this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Implicit(`0[0:,0:])~Towel.Mathematics.MatrixSparse{`0}">
+            <summary>Converts a T[,] into a matrix.</summary>
+            <param name="array">The T[,] to convert to a matrix.</param>
+            <returns>The resulting matrix after conversion.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.op_Explicit(Towel.Mathematics.MatrixSparse{`0})~`0[0:,0:]">
+            <summary>Converts a matrix into a T[,].</summary>
+            <param name="matrix">The matrix toconvert to a T[,].</param>
+            <returns>The resulting T[,] after conversion.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Stepper(Towel.Step{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Stepper(Towel.StepBreak{`0})">
+            <summary>Invokes a delegate for each entry in the data structure.</summary>
+            <param name="step">The delegate to invoke on each item in the structure.</param>
+            <returns>The resulting status of the iteration.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.ToString">
+            <summary>Prints out a string representation of this matrix.</summary>
+            <returns>A string representing this matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.GetHashCode">
+            <summary>Matrixs a hash code from the values of this matrix.</summary>
+            <returns>A hash code for the matrix.</returns>
+        </member>
+        <member name="M:Towel.Mathematics.MatrixSparse`1.Equals(System.Object)">
             <summary>Does an equality check by value.</summary>
             <param name="b">The object to compare to.</param>
             <returns>True if the references are equal, false if not.</returns>
@@ -31587,6 +32276,12 @@
             <returns>A stepper build from the iteration pattern.</returns>
         </member>
         <member name="M:Towel.Stepper.ToStepper``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>Converts an IEnumerable into a stepper delegate./></summary>
+            <typeparam name="T">The generic type being iterated.</typeparam>
+            <param name="enumerable">The Ienumerable to convert.</param>
+            <returns>The stepper delegate comparable to the IEnumerable provided.</returns>
+        </member>
+        <member name="M:Towel.Stepper.ToStepperBreak``1(System.Collections.Generic.IEnumerable{``0})">
             <summary>Converts an IEnumerable into a stepper delegate./></summary>
             <typeparam name="T">The generic type being iterated.</typeparam>
             <param name="enumerable">The Ienumerable to convert.</param>
